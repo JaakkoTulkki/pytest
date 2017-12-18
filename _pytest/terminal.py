@@ -123,6 +123,7 @@ class WarningReport:
 
 
 class TerminalReporter:
+    # todo refactor this
     def __init__(self, config, file=None):
         import _pytest.config
         self.config = config

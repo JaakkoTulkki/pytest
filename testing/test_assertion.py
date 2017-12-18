@@ -406,6 +406,15 @@ class TestAssert_reprcompare(object):
         expl = callequal(frozenset([0, 1]), set([0, 2]))
         assert len(expl) > 1
 
+    def test_nested_dicts(self):
+        left = {
+            'a': {'aa': {'aaaa': 'AAAA'}, 'aaa': 'AAA'}
+        }
+        right = {
+            'a': {'aa': {'aaab': 'AAAA'}, 'aaa': 'AAA'}
+        }
+        expl = callequal(left, right)
+        assert expl == 1
     def test_Sequence(self):
         col = py.builtin._tryimport(
             "collections.abc",

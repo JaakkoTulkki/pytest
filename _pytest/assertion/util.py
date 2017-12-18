@@ -259,6 +259,8 @@ def _compare_eq_set(left, right, verbose=False):
     return explanation
 
 
+# todo refactor this
+# https://github.com/pytest-dev/pytest/issues/1531
 def _compare_eq_dict(left, right, verbose=False):
     explanation = []
     common = set(left).intersection(set(right))

@@ -728,6 +728,7 @@ class Metafunc(fixtures.FuncargnamesCompatAttr):
         self._ids = py.builtin.set()
         self._arg2fixturedefs = fixtureinfo.name2fixturedefs
 
+    # todo refactor
     def parametrize(self, argnames, argvalues, indirect=False, ids=None,
                     scope=None):
         """ Add new invocations to the underlying test function using the list
@@ -972,6 +973,7 @@ def show_fixtures_per_test(config):
     return wrap_session(config, _show_fixtures_per_test)
 
 
+# todo refactor
 def _show_fixtures_per_test(config, session):
     import _pytest.config
     session.perform_collect()
