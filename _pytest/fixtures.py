@@ -44,6 +44,7 @@ scope2props["class"] = scope2props["module"] + ("cls",)
 scope2props["instance"] = scope2props["class"] + ("instance", )
 scope2props["function"] = scope2props["instance"] + ("function", "keywords")
 
+#todo Refactor this module
 
 def scopeproperty(name=None, doc=None):
     def decoratescope(func):

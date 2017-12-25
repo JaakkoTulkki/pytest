@@ -1,6 +1,15 @@
 """ terminal reporting of the full testing process.
 
 This is a good source for looking at the various reporting hooks.
+
+
+The hookspec is here: https://docs.pytest.org/en/latest/_modules/_pytest/hookspec.html
+
+Seems like pytest_unconfigure should use the @pytest.hookimpl(trylast=True) decorator
+
+https://docs.pytest.org/en/latest/writing_plugins.html
+https://docs.pytest.org/en/latest/usage.html
+
 """
 from __future__ import absolute_import, division, print_function
 
@@ -110,9 +119,13 @@ class WarningReport:
         Returns the more user-friendly information about the location
         of a warning, or None.
         """
+        # todo Refactor this
+        # hard to understand what are nodeid and fslocation
+        # maybe rename them?
         if self.nodeid:
             return self.nodeid
         if self.fslocation:
+            # extract method 110
             if isinstance(self.fslocation, tuple) and len(self.fslocation) >= 2:
                 filename, linenum = self.fslocation[:2]
                 relpath = py.path.local(filename).relto(config.invocation_dir)
@@ -128,6 +141,7 @@ class TerminalReporter:
         import _pytest.config
         self.config = config
         self.verbosity = self.config.option.verbose
+        # these are better as functions
         self.showheader = self.verbosity >= 0
         self.showfspath = self.verbosity >= 0
         self.showlongtestinfo = self.verbosity > 0
@@ -149,7 +163,12 @@ class TerminalReporter:
         return char in self.reportchars
 
     def write_fspath_result(self, nodeid, res):
+        # This knows too much about the config -> that it has rootdir, that has join method...
+        # Extract class, config should be a class with some interface...
+        # This is in my experience once of the pain points of Python and in general dynamic languages.
+        # what is nodeid?
         fspath = self.config.rootdir.join(nodeid.split("::")[0])
+        # Introduce explaining variable 124
         if fspath != self.currentfspath:
             self.currentfspath = fspath
             fspath = self.startdir.bestrelpath(fspath)
@@ -158,6 +177,7 @@ class TerminalReporter:
         self._tw.write(res)
 
     def write_ensure_prefix(self, prefix, extra="", **kwargs):
+        # Introduce explaining variable 124
         if self.currentfspath != prefix:
             self._tw.line()
             self.currentfspath = prefix
@@ -228,6 +248,9 @@ class TerminalReporter:
             self.write_line(msg)
 
     def pytest_deselected(self, items):
+        # When is this being used, and why is this setting the default now?
+        # should this not have been set before?
+        # should stats be a class?
         self.stats.setdefault('deselected', []).extend(items)
 
     def pytest_runtest_logstart(self, nodeid, location):
@@ -241,6 +264,8 @@ class TerminalReporter:
             self.write_fspath_result(fsid, "")
 
     def pytest_runtest_logreport(self, report):
+        # extract method 109
+        # the whole function needs to be broken down
         rep = report
         res = self.config.hook.pytest_report_teststatus(report=rep)
         cat, letter, word = res
@@ -281,6 +306,7 @@ class TerminalReporter:
             self.write("collecting ... ", bold=True)
 
     def pytest_collectreport(self, report):
+        # should stats be a class?
         if report.failed:
             self.stats.setdefault("error", []).append(report)
         elif report.skipped:
@@ -322,6 +348,7 @@ class TerminalReporter:
         if not self.showheader:
             return
         self.write_sep("=", "test session starts", bold=True)
+        # remove temp variable
         verinfo = platform.python_version()
         msg = "platform %s -- Python %s" % (sys.platform, verinfo)
         if hasattr(sys, 'pypy_version_info'):
