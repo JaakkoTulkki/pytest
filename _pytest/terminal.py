@@ -138,8 +138,14 @@ class WarningReport:
 class TerminalReporter:
     # todo refactor this
     def __init__(self, config, file=None):
+        """
+
+        :param config: instance of Config
+        :param file:
+        """
         import _pytest.config
         self.config = config
+        # config.getoption('verbose') -> reads in Config, line 901
         self.verbosity = self.config.option.verbose
         # these are better as functions
         self.showheader = self.verbosity >= 0
@@ -318,6 +324,7 @@ class TerminalReporter:
             self.report_collect()
 
     def report_collect(self, final=False):
+        # this should be private
         if self.config.option.verbose < 0:
             return
 
