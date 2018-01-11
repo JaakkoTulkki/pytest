@@ -61,14 +61,14 @@ and another like this::
 then you can just invoke ``pytest`` without command line options::
 
     $ pytest
-    ======= test session starts ========
+    =========================== test session starts ============================
     platform linux -- Python 3.x.y, pytest-3.x.y, py-1.x.y, pluggy-0.x.y
     rootdir: $REGENDOC_TMPDIR, inifile: pytest.ini
     collected 1 item
     
-    mymodule.py .
+    mymodule.py .                                                        [100%]
     
-    ======= 1 passed in 0.12 seconds ========
+    ========================= 1 passed in 0.12 seconds =========================
 
 It is possible to use fixtures using the ``getfixture`` helper::
 
@@ -81,9 +81,9 @@ Also, :ref:`usefixtures` and :ref:`autouse` fixtures are supported
 when executing text doctest files.
 
 The standard ``doctest`` module provides some setting flags to configure the
-strictness of doctest tests. In pytest You can enable those flags those flags
-using the configuration file. To make pytest ignore trailing whitespaces and
-ignore lengthy exception stack traces you can just write:
+strictness of doctest tests. In pytest, you can enable those flags using the
+configuration file. To make pytest ignore trailing whitespaces and ignore
+lengthy exception stack traces you can just write:
 
 .. code-block:: ini
 

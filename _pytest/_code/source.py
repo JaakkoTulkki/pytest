@@ -1,18 +1,16 @@
 from __future__ import absolute_import, division, generators, print_function
 
+import ast
+from ast import PyCF_ONLY_AST as _AST_FLAG
 from bisect import bisect_right
+import linecache
 import sys
+import six
 import inspect
 import tokenize
 import py
-cpy_compile = compile
 
-try:
-    import _ast
-    from _ast import PyCF_ONLY_AST as _AST_FLAG
-except ImportError:
-    _AST_FLAG = 0
-    _ast = None
+cpy_compile = compile
 
 
 class Source(object):
@@ -32,7 +30,7 @@ class Source(object):
                 partlines = part.lines
             elif isinstance(part, (tuple, list)):
                 partlines = [x.rstrip("\n") for x in part]
-            elif isinstance(part, py.builtin._basestring):
+            elif isinstance(part, six.string_types):
                 partlines = part.split('\n')
                 if rstrip:
                     while partlines:
@@ -194,7 +192,7 @@ class Source(object):
             if flag & _AST_FLAG:
                 return co
             lines = [(x + "\n") for x in self.lines]
-            py.std.linecache.cache[filename] = (1, None, lines, filename)
+            linecache.cache[filename] = (1, None, lines, filename)
             return co
 
 #
@@ -208,7 +206,7 @@ def compile_(source, filename=None, mode='exec', flags=generators.compiler_flag,
         retrieval of the source code for the code object
         and any recursively created code objects.
     """
-    if _ast is not None and isinstance(source, _ast.AST):
+    if isinstance(source, ast.AST):
         # XXX should Source support having AST?
         return cpy_compile(source, filename, mode, flags, dont_inherit)
     _genframe = sys._getframe(1)  # the caller
@@ -226,8 +224,7 @@ def getfslineno(obj):
         code = _pytest._code.Code(obj)
     except TypeError:
         try:
-            fn = (py.std.inspect.getsourcefile(obj) or
-                  py.std.inspect.getfile(obj))
+            fn = inspect.getsourcefile(obj) or inspect.getfile(obj)
         except TypeError:
             return "", -1
 
@@ -251,10 +248,10 @@ def getfslineno(obj):
 
 def findsource(obj):
     try:
-        sourcelines, lineno = py.std.inspect.findsource(obj)
+        sourcelines, lineno = inspect.findsource(obj)
     except py.builtin._sysex:
         raise
-    except:
+    except:  # noqa
         return None, -1
     source = Source()
     source.lines = [line.rstrip() for line in sourcelines]
@@ -319,30 +316,28 @@ def get_statement_startend2(lineno, node):
     import ast
     # flatten all statements and except handlers into one lineno-list
     # AST's line numbers start indexing at 1
-    l = []
+    values = []
     for x in ast.walk(node):
-        if isinstance(x, _ast.stmt) or isinstance(x, _ast.ExceptHandler):
-            l.append(x.lineno - 1)
+        if isinstance(x, ast.stmt) or isinstance(x, ast.ExceptHandler):
+            values.append(x.lineno - 1)
             for name in "finalbody", "orelse":
                 val = getattr(x, name, None)
                 if val:
                     # treat the finally/orelse part as its own statement
-                    l.append(val[0].lineno - 1 - 1)
-    l.sort()
-    insert_index = bisect_right(l, lineno)
-    start = l[insert_index - 1]
-    if insert_index >= len(l):
+                    values.append(val[0].lineno - 1 - 1)
+    values.sort()
+    insert_index = bisect_right(values, lineno)
+    start = values[insert_index - 1]
+    if insert_index >= len(values):
         end = None
     else:
-        end = l[insert_index]
+        end = values[insert_index]
     return start, end
 
 
 def getstatementrange_ast(lineno, source, assertion=False, astnode=None):
     if astnode is None:
         content = str(source)
-        if sys.version_info < (2, 7):
-            content += "\n"
         try:
             astnode = compile(content, "source", "exec", 1024)  # 1024 for AST
         except ValueError:

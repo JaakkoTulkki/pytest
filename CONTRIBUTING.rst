@@ -49,7 +49,7 @@ Fix bugs
 --------
 
 Look through the GitHub issues for bugs.  Here is a filter you can use:
-https://github.com/pytest-dev/pytest/labels/bug
+https://github.com/pytest-dev/pytest/labels/type%3A%20bug
 
 :ref:`Talk <contact>` to developers to find out how you can fix specific bugs.
 
@@ -120,7 +120,7 @@ the following:
 - PyPI presence with a ``setup.py`` that contains a license, ``pytest-``
   prefixed name, version number, authors, short and long description.
 
-- a ``tox.ini`` for running tests using `tox <http://tox.testrun.org>`_.
+- a ``tox.ini`` for running tests using `tox <https://tox.readthedocs.io>`_.
 
 - a ``README.txt`` describing how to use the plugin and on which
   platforms it runs.
@@ -177,7 +177,8 @@ Short version
 #. Write a ``changelog`` entry: ``changelog/2574.bugfix``, use issue id number
    and one of ``bugfix``, ``removal``, ``feature``, ``vendor``, ``doc`` or
    ``trivial`` for the issue type.
-#. Add yourself to ``AUTHORS`` file if not there yet, in alphabetical order.
+#. Unless your change is a trivial or a documentation fix (e.g., a typo or reword of a small section) please
+   add yourself to the ``AUTHORS`` file, in alphabetical order;
 
 
 Long version
@@ -275,3 +276,15 @@ Here is a simple overview, with pytest-specific bits:
     base: features        # if it's a feature
 
 
+Joining the Development Team
+----------------------------
+
+Anyone who has successfully seen through a pull request which did not
+require any extra work from the development team to merge will
+themselves gain commit access if they so wish (if we forget to ask please send a friendly
+reminder).  This does not mean your workflow to contribute changes,
+everyone goes through the same pull-request-and-review process and
+no-one merges their own pull requests unless already approved.  It does however mean you can
+participate in the development process more fully since you can merge
+pull requests from other contributors yourself after having reviewed
+them.

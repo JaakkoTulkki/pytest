@@ -1,8 +1,10 @@
 # encoding: UTF-8
 from __future__ import absolute_import, division, print_function
 import pytest
-import py
 import os
+import re
+import sys
+import types
 
 from _pytest.config import get_config, PytestPluginManager
 from _pytest.main import EXIT_NOTESTSCOLLECTED, Session
@@ -85,23 +87,23 @@ class TestPytestPluginInteractions(object):
 
     def test_configure(self, testdir):
         config = testdir.parseconfig()
-        l = []
+        values = []
 
         class A(object):
             def pytest_configure(self, config):
-                l.append(self)
+                values.append(self)
 
         config.pluginmanager.register(A())
-        assert len(l) == 0
+        assert len(values) == 0
         config._do_configure()
-        assert len(l) == 1
+        assert len(values) == 1
         config.pluginmanager.register(A())  # leads to a configured() plugin
-        assert len(l) == 2
-        assert l[0] != l[1]
+        assert len(values) == 2
+        assert values[0] != values[1]
 
         config._ensure_unconfigure()
         config.pluginmanager.register(A())
-        assert len(l) == 2
+        assert len(values) == 2
 
     def test_hook_tracing(self):
         pytestpm = get_config().pluginmanager  # fully initialized with plugins
@@ -116,19 +118,19 @@ class TestPytestPluginInteractions(object):
                 saveindent.append(pytestpm.trace.root.indent)
                 raise ValueError()
 
-        l = []
-        pytestpm.trace.root.setwriter(l.append)
+        values = []
+        pytestpm.trace.root.setwriter(values.append)
         undo = pytestpm.enable_tracing()
         try:
             indent = pytestpm.trace.root.indent
             p = api1()
             pytestpm.register(p)
             assert pytestpm.trace.root.indent == indent
-            assert len(l) >= 2
-            assert 'pytest_plugin_registered' in l[0]
-            assert 'finish' in l[1]
+            assert len(values) >= 2
+            assert 'pytest_plugin_registered' in values[0]
+            assert 'finish' in values[1]
 
-            l[:] = []
+            values[:] = []
             with pytest.raises(ValueError):
                 pytestpm.register(api2())
             assert pytestpm.trace.root.indent == indent
@@ -154,23 +156,6 @@ class TestPytestPluginInteractions(object):
         config.pluginmanager._importconftest(conftest2)
         ihook_b = session.gethookproxy(testdir.tmpdir.join('tests'))
         assert ihook_a is not ihook_b
-
-    def test_warn_on_deprecated_multicall(self, pytestpm):
-        warnings = []
-
-        class get_warnings(object):
-            def pytest_logwarning(self, message):
-                warnings.append(message)
-
-        class Plugin(object):
-            def pytest_configure(self, __multicall__):
-                pass
-
-        pytestpm.register(get_warnings())
-        before = list(warnings)
-        pytestpm.register(Plugin())
-        assert len(warnings) == len(before) + 1
-        assert "deprecated" in warnings[-1]
 
     def test_warn_on_deprecated_addhooks(self, pytestpm):
         warnings = []
@@ -216,30 +201,35 @@ def test_importplugin_error_message(testdir, pytestpm):
     testdir.syspathinsert(testdir.tmpdir)
     testdir.makepyfile(qwe="""
         # encoding: UTF-8
-        raise ImportError(u'Not possible to import: ☺')
+        def test_traceback():
+            raise ImportError(u'Not possible to import: ☺')
+        test_traceback()
     """)
     with pytest.raises(ImportError) as excinfo:
         pytestpm.import_plugin("qwe")
-    expected = '.*Error importing plugin "qwe": Not possible to import: .'
-    assert py.std.re.match(expected, str(excinfo.value))
+
+    expected_message = '.*Error importing plugin "qwe": Not possible to import: .'
+    expected_traceback = ".*in test_traceback"
+    assert re.match(expected_message, str(excinfo.value))
+    assert re.match(expected_traceback, str(excinfo.traceback[-1]))
 
 
 class TestPytestPluginManager(object):
     def test_register_imported_modules(self):
         pm = PytestPluginManager()
-        mod = py.std.types.ModuleType("x.y.pytest_hello")
+        mod = types.ModuleType("x.y.pytest_hello")
         pm.register(mod)
         assert pm.is_registered(mod)
-        l = pm.get_plugins()
-        assert mod in l
+        values = pm.get_plugins()
+        assert mod in values
         pytest.raises(ValueError, "pm.register(mod)")
         pytest.raises(ValueError, lambda: pm.register(mod))
         # assert not pm.is_registered(mod2)
-        assert pm.get_plugins() == l
+        assert pm.get_plugins() == values
 
     def test_canonical_import(self, monkeypatch):
-        mod = py.std.types.ModuleType("pytest_xyz")
-        monkeypatch.setitem(py.std.sys.modules, 'pytest_xyz', mod)
+        mod = types.ModuleType("pytest_xyz")
+        monkeypatch.setitem(sys.modules, 'pytest_xyz', mod)
         pm = PytestPluginManager()
         pm.import_plugin('pytest_xyz')
         assert pm.get_plugin('pytest_xyz') == mod
@@ -249,7 +239,7 @@ class TestPytestPluginManager(object):
         testdir.syspathinsert()
         testdir.makepyfile(pytest_p1="#")
         testdir.makepyfile(pytest_p2="#")
-        mod = py.std.types.ModuleType("temp")
+        mod = types.ModuleType("temp")
         mod.pytest_plugins = ["pytest_p1", "pytest_p2"]
         pytestpm.consider_module(mod)
         assert pytestpm.get_plugin("pytest_p1").__name__ == "pytest_p1"
@@ -257,20 +247,20 @@ class TestPytestPluginManager(object):
 
     def test_consider_module_import_module(self, testdir):
         pytestpm = get_config().pluginmanager
-        mod = py.std.types.ModuleType("x")
+        mod = types.ModuleType("x")
         mod.pytest_plugins = "pytest_a"
         aplugin = testdir.makepyfile(pytest_a="#")
         reprec = testdir.make_hook_recorder(pytestpm)
         # syspath.prepend(aplugin.dirpath())
-        py.std.sys.path.insert(0, str(aplugin.dirpath()))
+        sys.path.insert(0, str(aplugin.dirpath()))
         pytestpm.consider_module(mod)
         call = reprec.getcall(pytestpm.hook.pytest_plugin_registered.name)
         assert call.plugin.__name__ == "pytest_a"
 
         # check that it is not registered twice
         pytestpm.consider_module(mod)
-        l = reprec.getcalls("pytest_plugin_registered")
-        assert len(l) == 1
+        values = reprec.getcalls("pytest_plugin_registered")
+        assert len(values) == 1
 
     def test_consider_env_fails_to_import(self, monkeypatch, pytestpm):
         monkeypatch.setenv('PYTEST_PLUGINS', 'nonexisting', prepend=",")

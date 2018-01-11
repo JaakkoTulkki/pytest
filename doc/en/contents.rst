@@ -30,6 +30,7 @@ Full pytest documentation
    xunit_setup
    plugins
    writing_plugins
+   logging
 
    goodpractices
    pythonpath
@@ -41,6 +42,7 @@ Full pytest documentation
    historical-notes
    license
    contributing
+   development_guide
    talks
    projects
    faq

@@ -4,9 +4,6 @@ needs argcomplete>=0.5.6 for python 3.2/3.3 (older versions fail
 to find the magic string, so _ARGCOMPLETE env. var is never set, and
 this does not need special code.
 
-argcomplete does not support python 2.5 (although the changes for that
-are minor).
-
 Function try_argcomplete(parser) should be called directly before
 the call to ArgumentParser.parse_args().
 
@@ -78,7 +75,8 @@ class FastFilesCompleter:
         completion = []
         globbed = []
         if '*' not in prefix and '?' not in prefix:
-            if prefix[-1] == os.path.sep:  # we are on unix, otherwise no bash
+            # we are on unix, otherwise no bash
+            if not prefix or prefix[-1] == os.path.sep:
                 globbed.extend(glob(prefix + '.*'))
             prefix += '*'
         globbed.extend(glob(prefix))
@@ -98,7 +96,7 @@ if os.environ.get('_ARGCOMPLETE'):
     filescompleter = FastFilesCompleter()
 
     def try_argcomplete(parser):
-        argcomplete.autocomplete(parser)
+        argcomplete.autocomplete(parser, always_complete_options=False)
 else:
     def try_argcomplete(parser):
         pass

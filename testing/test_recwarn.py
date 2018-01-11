@@ -1,7 +1,6 @@
 from __future__ import absolute_import, division, print_function
 import warnings
 import re
-import py
 
 import pytest
 from _pytest.recwarn import WarningsRecorder
@@ -24,16 +23,16 @@ class TestWarningsRecorderChecker(object):
         rec = WarningsRecorder()
         with rec:
             assert not rec.list
-            py.std.warnings.warn_explicit("hello", UserWarning, "xyz", 13)
+            warnings.warn_explicit("hello", UserWarning, "xyz", 13)
             assert len(rec.list) == 1
-            py.std.warnings.warn(DeprecationWarning("hello"))
+            warnings.warn(DeprecationWarning("hello"))
             assert len(rec.list) == 2
             warn = rec.pop()
             assert str(warn.message) == "hello"
-            l = rec.list
+            values = rec.list
             rec.clear()
             assert len(rec.list) == 0
-            assert l is rec.list
+            assert values is rec.list
             pytest.raises(AssertionError, "rec.pop()")
 
     def test_typechecking(self):
@@ -64,14 +63,14 @@ class TestDeprecatedCall(object):
 
     def dep(self, i, j=None):
         if i == 0:
-            py.std.warnings.warn("is deprecated", DeprecationWarning,
-                                 stacklevel=1)
+            warnings.warn("is deprecated", DeprecationWarning,
+                          stacklevel=1)
         return 42
 
     def dep_explicit(self, i):
         if i == 0:
-            py.std.warnings.warn_explicit("dep_explicit", category=DeprecationWarning,
-                                          filename="hello", lineno=3)
+            warnings.warn_explicit("dep_explicit", category=DeprecationWarning,
+                                   filename="hello", lineno=3)
 
     def test_deprecated_call_raises(self):
         with pytest.raises(AssertionError) as excinfo:
@@ -86,16 +85,16 @@ class TestDeprecatedCall(object):
         assert ret == 42
 
     def test_deprecated_call_preserves(self):
-        onceregistry = py.std.warnings.onceregistry.copy()
-        filters = py.std.warnings.filters[:]
-        warn = py.std.warnings.warn
-        warn_explicit = py.std.warnings.warn_explicit
+        onceregistry = warnings.onceregistry.copy()
+        filters = warnings.filters[:]
+        warn = warnings.warn
+        warn_explicit = warnings.warn_explicit
         self.test_deprecated_call_raises()
         self.test_deprecated_call()
-        assert onceregistry == py.std.warnings.onceregistry
-        assert filters == py.std.warnings.filters
-        assert warn is py.std.warnings.warn
-        assert warn_explicit is py.std.warnings.warn_explicit
+        assert onceregistry == warnings.onceregistry
+        assert filters == warnings.filters
+        assert warn is warnings.warn
+        assert warn_explicit is warnings.warn_explicit
 
     def test_deprecated_explicit_call_raises(self):
         with pytest.raises(AssertionError):
@@ -284,3 +283,27 @@ class TestWarns(object):
         ''')
         result = testdir.runpytest()
         result.stdout.fnmatch_lines(['*2 passed in*'])
+
+    def test_match_regex(self):
+        with pytest.warns(UserWarning, match=r'must be \d+$'):
+            warnings.warn("value must be 42", UserWarning)
+
+        with pytest.raises(pytest.fail.Exception):
+            with pytest.warns(UserWarning, match=r'must be \d+$'):
+                warnings.warn("this is not here", UserWarning)
+
+        with pytest.raises(pytest.fail.Exception):
+            with pytest.warns(FutureWarning, match=r'must be \d+$'):
+                warnings.warn("value must be 42", UserWarning)
+
+    def test_one_from_multiple_warns(self):
+        with pytest.warns(UserWarning, match=r'aaa'):
+            warnings.warn("cccccccccc", UserWarning)
+            warnings.warn("bbbbbbbbbb", UserWarning)
+            warnings.warn("aaaaaaaaaa", UserWarning)
+
+    def test_none_of_multiple_warns(self):
+        with pytest.raises(pytest.fail.Exception):
+            with pytest.warns(UserWarning, match=r'aaa'):
+                warnings.warn("bbbbbbbbbb", UserWarning)
+                warnings.warn("cccccccccc", UserWarning)

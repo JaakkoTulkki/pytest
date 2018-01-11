@@ -1,11 +1,15 @@
 """ core implementation of testing process: init, session, runtest loop. """
 from __future__ import absolute_import, division, print_function
 
+import contextlib
 import functools
 import os
+import pkgutil
+import six
 import sys
 
 import _pytest
+from _pytest import nodes
 import _pytest._code
 import py
 try:
@@ -14,8 +18,8 @@ except ImportError:
     from UserDict import DictMixin as MappingMixin
 
 from _pytest.config import directory_arg, UsageError, hookimpl
-from _pytest.runner import collect_one_node
 from _pytest.outcomes import exit
+from _pytest.runner import collect_one_node
 
 tracebackcutdir = py.path.local(_pytest.__file__).dirpath()
 
@@ -83,15 +87,6 @@ def pytest_addoption(parser):
                     help="base temporary directory for this test run.")
 
 
-def pytest_namespace():
-    """keeping this one works around a deeper startup issue in pytest
-
-    i tried to find it for a while but the amount of time turned unsustainable,
-    so i put a hack in to revisit later
-    """
-    return {}
-
-
 def pytest_configure(config):
     __import__('pytest').config = config  # compatibiltiy
 
@@ -110,6 +105,8 @@ def wrap_session(config, doit):
             session.exitstatus = doit(config, session) or 0
         except UsageError:
             raise
+        except Failed:
+            session.exitstatus = EXIT_TESTSFAILED
         except KeyboardInterrupt:
             excinfo = _pytest._code.ExceptionInfo()
             if initstate < 2 and isinstance(excinfo.value, exit.Exception):
@@ -117,7 +114,7 @@ def wrap_session(config, doit):
                     excinfo.typename, excinfo.value.msg))
             config.hook.pytest_keyboard_interrupt(excinfo=excinfo)
             session.exitstatus = EXIT_INTERRUPTED
-        except:
+        except:  # noqa
             excinfo = _pytest._code.ExceptionInfo()
             config.notify_exception(excinfo, config.option)
             session.exitstatus = EXIT_INTERNALERROR
@@ -167,6 +164,8 @@ def pytest_runtestloop(session):
     for i, item in enumerate(session.items):
         nextitem = session.items[i + 1] if i + 1 < len(session.items) else None
         item.config.hook.pytest_runtest_protocol(item=item, nextitem=nextitem)
+        if session.shouldfail:
+            raise session.Failed(session.shouldfail)
         if session.shouldstop:
             raise session.Interrupted(session.shouldstop)
     return True
@@ -207,6 +206,46 @@ def pytest_ignore_collect(path, config):
             duplicate_paths.add(path)
 
     return False
+
+
+@contextlib.contextmanager
+def _patched_find_module():
+    """Patch bug in pkgutil.ImpImporter.find_module
+
+    When using pkgutil.find_loader on python<3.4 it removes symlinks
+    from the path due to a call to os.path.realpath. This is not consistent
+    with actually doing the import (in these versions, pkgutil and __import__
+    did not share the same underlying code). This can break conftest
+    discovery for pytest where symlinks are involved.
+
+    The only supported python<3.4 by pytest is python 2.7.
+    """
+    if six.PY2:  # python 3.4+ uses importlib instead
+        def find_module_patched(self, fullname, path=None):
+            # Note: we ignore 'path' argument since it is only used via meta_path
+            subname = fullname.split(".")[-1]
+            if subname != fullname and self.path is None:
+                return None
+            if self.path is None:
+                path = None
+            else:
+                # original: path = [os.path.realpath(self.path)]
+                path = [self.path]
+            try:
+                file, filename, etc = pkgutil.imp.find_module(subname,
+                                                              path)
+            except ImportError:
+                return None
+            return pkgutil.ImpLoader(fullname, file, filename, etc)
+
+        old_find_module = pkgutil.ImpImporter.find_module
+        pkgutil.ImpImporter.find_module = find_module_patched
+        try:
+            yield
+        finally:
+            pkgutil.ImpImporter.find_module = old_find_module
+    else:
+        yield
 
 
 class FSHookProxy:
@@ -363,24 +402,6 @@ class Node(object):
     def teardown(self):
         pass
 
-    def _memoizedcall(self, attrname, function):
-        exattrname = "_ex_" + attrname
-        failure = getattr(self, exattrname, None)
-        if failure is not None:
-            py.builtin._reraise(failure[0], failure[1], failure[2])
-        if hasattr(self, attrname):
-            return getattr(self, attrname)
-        try:
-            res = function()
-        except py.builtin._sysex:
-            raise
-        except:
-            failure = sys.exc_info()
-            setattr(self, exattrname, failure)
-            raise
-        setattr(self, attrname, res)
-        return res
-
     def listchain(self):
         """ return list of all parent collectors up to self,
             starting from root of collection tree. """
@@ -398,7 +419,7 @@ class Node(object):
         ``marker`` can be a string or pytest.mark.* instance.
         """
         from _pytest.mark import MarkDecorator, MARK_GEN
-        if isinstance(marker, py.builtin._basestring):
+        if isinstance(marker, six.string_types):
             marker = getattr(MARK_GEN, marker)
         elif not isinstance(marker, MarkDecorator):
             raise ValueError("is not a string or pytest.mark.* Marker")
@@ -516,14 +537,22 @@ class FSCollector(Collector):
             rel = fspath.relto(parent.fspath)
             if rel:
                 name = rel
-            name = name.replace(os.sep, "/")
+            name = name.replace(os.sep, nodes.SEP)
         super(FSCollector, self).__init__(name, parent, config, session)
         self.fspath = fspath
 
+    def _check_initialpaths_for_relpath(self):
+        for initialpath in self.session._initialpaths:
+            if self.fspath.common(initialpath) == initialpath:
+                return self.fspath.relto(initialpath.dirname)
+
     def _makeid(self):
         relpath = self.fspath.relto(self.config.rootdir)
-        if os.sep != "/":
-            relpath = relpath.replace(os.sep, "/")
+
+        if not relpath:
+            relpath = self._check_initialpaths_for_relpath()
+        if os.sep != nodes.SEP:
+            relpath = relpath.replace(os.sep, nodes.SEP)
         return relpath
 
 
@@ -590,8 +619,13 @@ class Interrupted(KeyboardInterrupt):
     __module__ = 'builtins'  # for py3
 
 
+class Failed(Exception):
+    """ signals an stop as failed test run. """
+
+
 class Session(FSCollector):
     Interrupted = Interrupted
+    Failed = Failed
 
     def __init__(self, config):
         FSCollector.__init__(self, config.rootdir, parent=None,
@@ -599,6 +633,7 @@ class Session(FSCollector):
         self.testsfailed = 0
         self.testscollected = 0
         self.shouldstop = False
+        self.shouldfail = False
         self.trace = config.trace.root.get("collection")
         self._norecursepatterns = config.getini("norecursedirs")
         self.startdir = py.path.local()
@@ -609,6 +644,8 @@ class Session(FSCollector):
 
     @hookimpl(tryfirst=True)
     def pytest_collectstart(self):
+        if self.shouldfail:
+            raise self.Failed(self.shouldfail)
         if self.shouldstop:
             raise self.Interrupted(self.shouldstop)
 
@@ -618,7 +655,7 @@ class Session(FSCollector):
             self.testsfailed += 1
             maxfail = self.config.getvalue("maxfail")
             if maxfail and self.testsfailed >= maxfail:
-                self.shouldstop = "stopping after %d failures" % (
+                self.shouldfail = "stopping after %d failures" % (
                     self.testsfailed)
     pytest_collectreport = pytest_runtest_logreport
 
@@ -733,9 +770,10 @@ class Session(FSCollector):
         """Convert a dotted module name to path.
 
         """
-        import pkgutil
+
         try:
-            loader = pkgutil.find_loader(x)
+            with _patched_find_module():
+                loader = pkgutil.find_loader(x)
         except ImportError:
             return x
         if loader is None:
@@ -743,7 +781,8 @@ class Session(FSCollector):
         # This method is sometimes invoked when AssertionRewritingHook, which
         # does not define a get_filename method, is already in place:
         try:
-            path = loader.get_filename(x)
+            with _patched_find_module():
+                path = loader.get_filename(x)
         except AttributeError:
             # Retrieve path from AssertionRewritingHook:
             path = loader.modules[x][0].co_filename

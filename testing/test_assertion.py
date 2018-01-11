@@ -129,11 +129,29 @@ class TestImportHookInstallation(object):
         result = testdir.runpytest_subprocess('--assert=rewrite')
         assert result.ret == 0
 
+    def test_pytest_plugins_rewrite_module_names_correctly(self, testdir):
+        """Test that we match files correctly when they are marked for rewriting (#2939)."""
+        contents = {
+            'conftest.py': """
+                pytest_plugins = "ham"
+            """,
+            'ham.py': "",
+            'hamster.py': "",
+            'test_foo.py': """
+                def test_foo(pytestconfig):
+                    assert pytestconfig.pluginmanager.rewrite_hook.find_module('ham') is not None
+                    assert pytestconfig.pluginmanager.rewrite_hook.find_module('hamster') is None
+            """,
+        }
+        testdir.makepyfile(**contents)
+        result = testdir.runpytest_subprocess('--assert=rewrite')
+        assert result.ret == 0
+
     @pytest.mark.parametrize('mode', ['plain', 'rewrite'])
     @pytest.mark.parametrize('plugin_state', ['development', 'installed'])
     def test_installed_plugin_rewrite(self, testdir, mode, plugin_state):
         # Make sure the hook is installed early enough so that plugins
-        # installed via setuptools are re-written.
+        # installed via setuptools are rewritten.
         testdir.tmpdir.join('hampkg').ensure(dir=1)
         contents = {
             'hampkg/__init__.py': """
@@ -229,9 +247,9 @@ class TestImportHookInstallation(object):
                     return pkg.helper.tool
             """,
             'pkg/other.py': """
-                l = [3, 2]
+                values = [3, 2]
                 def tool():
-                    assert l.pop() == 3
+                    assert values.pop() == 3
             """,
             'conftest.py': """
                 pytest_plugins = ['pkg.plugin']
@@ -248,7 +266,7 @@ class TestImportHookInstallation(object):
         result = testdir.runpytest_subprocess('--assert=rewrite')
         result.stdout.fnmatch_lines(['>*assert a == b*',
                                      'E*assert 2 == 3*',
-                                     '>*assert l.pop() == 3*',
+                                     '>*assert values.pop() == 3*',
                                      'E*AssertionError'])
 
     def test_register_assert_rewrite_checks_types(self):
@@ -263,13 +281,13 @@ class TestBinReprIntegration(object):
     def test_pytest_assertrepr_compare_called(self, testdir):
         testdir.makeconftest("""
             import pytest
-            l = []
+            values = []
             def pytest_assertrepr_compare(op, left, right):
-                l.append((op, left, right))
+                values.append((op, left, right))
 
             @pytest.fixture
             def list(request):
-                return l
+                return values
         """)
         testdir.makepyfile("""
             def test_hello():
@@ -820,7 +838,7 @@ def test_traceback_failure(testdir):
     """)
     result = testdir.runpytest(p1, "--tb=long")
     result.stdout.fnmatch_lines([
-        "*test_traceback_failure.py F",
+        "*test_traceback_failure.py F*",
         "====* FAILURES *====",
         "____*____",
         "",
@@ -840,7 +858,7 @@ def test_traceback_failure(testdir):
 
     result = testdir.runpytest(p1)  # "auto"
     result.stdout.fnmatch_lines([
-        "*test_traceback_failure.py F",
+        "*test_traceback_failure.py F*",
         "====* FAILURES *====",
         "____*____",
         "",

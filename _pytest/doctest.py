@@ -50,10 +50,17 @@ def pytest_addoption(parser):
 def pytest_collect_file(path, parent):
     config = parent.config
     if path.ext == ".py":
-        if config.option.doctestmodules:
+        if config.option.doctestmodules and not _is_setup_py(config, path, parent):
             return DoctestModule(path, parent)
     elif _is_doctest(config, path, parent):
         return DoctestTextfile(path, parent)
+
+
+def _is_setup_py(config, path, parent):
+    if path.basename != "setup.py":
+        return False
+    contents = path.read()
+    return 'setuptools' in contents or 'distutils' in contents
 
 
 def _is_doctest(config, path, parent):
@@ -120,7 +127,7 @@ class DoctestItem(pytest.Item):
                 lines = ["%03d %s" % (i + test.lineno + 1, x)
                          for (i, x) in enumerate(lines)]
                 # trim docstring error lines to 10
-                lines = lines[example.lineno - 9:example.lineno + 1]
+                lines = lines[max(example.lineno - 9, 0):example.lineno + 1]
             else:
                 lines = ['EXAMPLE LOCATION UNKNOWN, not showing all tests of that example']
                 indent = '>>>'

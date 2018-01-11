@@ -7,7 +7,6 @@ import sys
 from time import time
 
 import py
-from _pytest.compat import _PY2
 from _pytest._code.code import TerminalRepr, ExceptionInfo
 from _pytest.outcomes import skip, Skipped, TEST_OUTCOME
 
@@ -54,11 +53,6 @@ def pytest_sessionstart(session):
 
 def pytest_sessionfinish(session):
     session._setupstate.teardown_all()
-
-
-class NodeInfo:
-    def __init__(self, location):
-        self.location = location
 
 
 def pytest_runtest_protocol(item, nextitem):
@@ -136,9 +130,8 @@ def _update_current_test_var(item, when):
     var_name = 'PYTEST_CURRENT_TEST'
     if when:
         value = '{0} ({1})'.format(item.nodeid, when)
-        if _PY2:
-            # python 2 doesn't like null bytes on environment variables (see #2644)
-            value = value.replace('\x00', '(null)')
+        # don't allow null bytes on environment variables (see #2644, #2957)
+        value = value.replace('\x00', '(null)')
         os.environ[var_name] = value
     else:
         os.environ.pop(var_name)
@@ -197,7 +190,7 @@ class CallInfo:
         except KeyboardInterrupt:
             self.stop = time()
             raise
-        except:
+        except:  # noqa
             self.excinfo = ExceptionInfo()
         self.stop = time()
 
@@ -436,7 +429,7 @@ class SetupState(object):
         is called at the end of teardown_all().
         """
         assert colitem and not isinstance(colitem, tuple)
-        assert py.builtin.callable(finalizer)
+        assert callable(finalizer)
         # assert colitem in self.stack  # some unit tests don't setup stack :/
         self._finalizers.setdefault(colitem, []).append(finalizer)
 

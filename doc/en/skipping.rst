@@ -3,7 +3,7 @@
 .. _skipping:
 
 Skip and xfail: dealing with tests that cannot succeed
-=====================================================================
+======================================================
 
 You can mark test functions that cannot be run on certain platforms
 or that you expect to fail so pytest can deal with them accordingly and
@@ -16,13 +16,17 @@ resource which is not available at the moment (for example a database).
 
 A **xfail** means that you expect a test to fail for some reason.
 A common example is a test for a feature not yet implemented, or a bug not yet fixed.
+When a test passes despite being expected to fail (marked with ``pytest.mark.xfail``),
+it's an **xpass** and will be reported in the test summary.
 
 ``pytest`` counts and lists *skip* and *xfail* tests separately. Detailed
 information about skipped/xfailed tests is not shown by default to avoid
 cluttering the output.  You can use the ``-r`` option to see details
 corresponding to the "short" letters shown in the test progress::
 
-    pytest -rxs  # show extra info on skips and xfails
+    pytest -rxXs  # show extra info on xfailed, xpassed, and skipped tests
+
+More details on the ``-r`` option can be found by running ``pytest -h``.
 
 (See :ref:`how to change command line options defaults`)
 
@@ -54,6 +58,16 @@ by calling the ``pytest.skip(reason)`` function:
         if not valid_config():
             pytest.skip("unsupported configuration")
 
+It is also possible to skip the whole module using
+``pytest.skip(reason, allow_module_level=True)`` at the module level:
+
+.. code-block:: python
+
+    import pytest
+
+    if not pytest.config.getoption("--custom-flag"):
+        pytest.skip("--custom-flag is missing, skipping tests", allow_module_level=True)
+
 The imperative method is useful when it is not possible to evaluate the skip condition
 during import time.
 
@@ -64,11 +78,11 @@ during import time.
 
 If you wish to skip something conditionally then you can use ``skipif`` instead.
 Here is an example of marking a test function to be skipped
-when run on a Python3.3 interpreter::
+when run on a Python3.6 interpreter::
 
     import sys
-    @pytest.mark.skipif(sys.version_info < (3,3),
-                        reason="requires python3.3")
+    @pytest.mark.skipif(sys.version_info < (3,6),
+                        reason="requires python3.6")
     def test_function():
         ...
 
@@ -136,6 +150,16 @@ If multiple ``skipif`` decorators are applied to a test function, it
 will be skipped if any of the skip conditions is true.
 
 .. _`whole class- or module level`: mark.html#scoped-marking
+
+
+Skipping files or directories
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Sometimes you may need to skip an entire file or directory, for example if the
+tests rely on Python version-specific features or contain code that you do not
+wish pytest to run. In this case, you must exclude the files and directories
+from collection. Refer to :ref:`customizing-test-collection` for more
+information.
 
 
 Skipping on a missing import dependency
@@ -250,8 +274,8 @@ You can change the default value of the ``strict`` parameter using the
 As with skipif_ you can also mark your expectation of a failure
 on a particular platform::
 
-    @pytest.mark.xfail(sys.version_info >= (3,3),
-                       reason="python3.3 api changes")
+    @pytest.mark.xfail(sys.version_info >= (3,6),
+                       reason="python3.6 api changes")
     def test_function():
         ...
 
@@ -307,16 +331,16 @@ Here is a simple test file with the several usages:
 Running it with the report-on-xfail option gives this output::
 
     example $ pytest -rx xfail_demo.py
-    ======= test session starts ========
+    =========================== test session starts ============================
     platform linux -- Python 3.x.y, pytest-3.x.y, py-1.x.y, pluggy-0.x.y
     rootdir: $REGENDOC_TMPDIR/example, inifile:
     collected 7 items
-
-    xfail_demo.py xxxxxxx
-    ======= short test summary info ========
+    
+    xfail_demo.py xxxxxxx                                                [100%]
+    ========================= short test summary info ==========================
     XFAIL xfail_demo.py::test_hello
     XFAIL xfail_demo.py::test_hello2
-      reason: [NOTRUN]
+      reason: [NOTRUN] 
     XFAIL xfail_demo.py::test_hello3
       condition: hasattr(os, 'sep')
     XFAIL xfail_demo.py::test_hello4
@@ -326,8 +350,8 @@ Running it with the report-on-xfail option gives this output::
     XFAIL xfail_demo.py::test_hello6
       reason: reason
     XFAIL xfail_demo.py::test_hello7
-
-    ======= 7 xfailed in 0.12 seconds ========
+    
+    ======================== 7 xfailed in 0.12 seconds =========================
 
 .. _`skip/xfail with parametrize`:
 

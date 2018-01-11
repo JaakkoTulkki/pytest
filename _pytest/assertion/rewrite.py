@@ -1,13 +1,13 @@
 """Rewrite assertion AST to produce nice error messages"""
 from __future__ import absolute_import, division, print_function
 import ast
-import _ast
 import errno
 import itertools
 import imp
 import marshal
 import os
 import re
+import six
 import struct
 import sys
 import types
@@ -33,7 +33,6 @@ else:
 PYC_EXT = ".py" + (__debug__ and "c" or "o")
 PYC_TAIL = "." + PYTEST_TAG + PYC_EXT
 
-REWRITE_NEWLINES = sys.version_info[:2] != (2, 7) and sys.version_info < (3, 2)
 ASCII_IS_DEFAULT_ENCODING = sys.version_info[0] < 3
 
 if sys.version_info >= (3, 5):
@@ -168,29 +167,31 @@ class AssertionRewritingHook(object):
                 return True
 
         for marked in self._must_rewrite:
-            if name.startswith(marked):
+            if name == marked or name.startswith(marked + '.'):
                 state.trace("matched marked file %r (from %r)" % (name, marked))
                 return True
 
         return False
 
     def mark_rewrite(self, *names):
-        """Mark import names as needing to be re-written.
+        """Mark import names as needing to be rewritten.
 
         The named module or package as well as any nested modules will
-        be re-written on import.
+        be rewritten on import.
         """
-        already_imported = set(names).intersection(set(sys.modules))
-        if already_imported:
-            for name in already_imported:
-                if name not in self._rewritten_names:
-                    self._warn_already_imported(name)
+        already_imported = (set(names)
+                            .intersection(sys.modules)
+                            .difference(self._rewritten_names))
+        for name in already_imported:
+            if not AssertionRewriter.is_rewrite_disabled(
+                    sys.modules[name].__doc__ or ""):
+                self._warn_already_imported(name)
         self._must_rewrite.update(names)
 
     def _warn_already_imported(self, name):
         self.config.warn(
             'P1',
-            'Module already imported so can not be re-written: %s' % name)
+            'Module already imported so cannot be rewritten: %s' % name)
 
     def load_module(self, name):
         # If there is an existing module object named 'fullname' in
@@ -210,7 +211,7 @@ class AssertionRewritingHook(object):
             mod.__cached__ = pyc
             mod.__loader__ = self
             py.builtin.exec_(co, mod.__dict__)
-        except:
+        except:  # noqa
             if name in sys.modules:
                 del sys.modules[name]
             raise
@@ -320,10 +321,6 @@ def _rewrite_test(config, fn):
                     return None, None
             finally:
                 del state._indecode
-    # On Python versions which are not 2.7 and less than or equal to 3.1, the
-    # parser expects *nix newlines.
-    if REWRITE_NEWLINES:
-        source = source.replace(RN, N) + N
     try:
         tree = ast.parse(source)
     except SyntaxError:
@@ -405,10 +402,10 @@ def _saferepr(obj):
 
     """
     repr = py.io.saferepr(obj)
-    if py.builtin._istext(repr):
-        t = py.builtin.text
+    if isinstance(repr, six.text_type):
+        t = six.text_type
     else:
-        t = py.builtin.bytes
+        t = six.binary_type
     return repr.replace(t("\n"), t("\\n"))
 
 
@@ -427,16 +424,16 @@ def _format_assertmsg(obj):
     # contains a newline it gets escaped, however if an object has a
     # .__repr__() which contains newlines it does not get escaped.
     # However in either case we want to preserve the newline.
-    if py.builtin._istext(obj) or py.builtin._isbytes(obj):
+    if isinstance(obj, six.text_type) or isinstance(obj, six.binary_type):
         s = obj
         is_repr = False
     else:
         s = py.io.saferepr(obj)
         is_repr = True
-    if py.builtin._istext(s):
-        t = py.builtin.text
+    if isinstance(s, six.text_type):
+        t = six.text_type
     else:
-        t = py.builtin.bytes
+        t = six.binary_type
     s = s.replace(t("\n"), t("\n~")).replace(t("%"), t("%%"))
     if is_repr:
         s = s.replace(t("\\n"), t("\n~"))
@@ -444,15 +441,15 @@ def _format_assertmsg(obj):
 
 
 def _should_repr_global_name(obj):
-    return not hasattr(obj, "__name__") and not py.builtin.callable(obj)
+    return not hasattr(obj, "__name__") and not callable(obj)
 
 
 def _format_boolop(explanations, is_or):
     explanation = "(" + (is_or and " or " or " and ").join(explanations) + ")"
-    if py.builtin._istext(explanation):
-        t = py.builtin.text
+    if isinstance(explanation, six.text_type):
+        t = six.text_type
     else:
-        t = py.builtin.bytes
+        t = six.binary_type
     return explanation.replace(t('%'), t('%%'))
 
 
@@ -533,7 +530,7 @@ class AssertionRewriter(ast.NodeVisitor):
     """Assertion rewriting implementation.
 
     The main entrypoint is to call .run() with an ast.Module instance,
-    this will then find all the assert statements and re-write them to
+    this will then find all the assert statements and rewrite them to
     provide intermediate values and a detailed assertion error.  See
     http://pybites.blogspot.be/2011/07/behind-scenes-of-pytests-new-assertion.html
     for an overview of how this works.
@@ -542,7 +539,7 @@ class AssertionRewriter(ast.NodeVisitor):
     statements in an ast.Module and for each ast.Assert statement it
     finds call .visit() with it.  Then .visit_Assert() takes over and
     is responsible for creating new ast statements to replace the
-    original assert statement: it re-writes the test of an assertion
+    original assert statement: it rewrites the test of an assertion
     to provide intermediate values and replace it with an if statement
     which raises an assertion error with a detailed explanation in
     case the expression is false.
@@ -595,23 +592,26 @@ class AssertionRewriter(ast.NodeVisitor):
         # docstrings and __future__ imports.
         aliases = [ast.alias(py.builtin.builtins.__name__, "@py_builtins"),
                    ast.alias("_pytest.assertion.rewrite", "@pytest_ar")]
-        expect_docstring = True
+        doc = getattr(mod, "docstring", None)
+        expect_docstring = doc is None
+        if doc is not None and self.is_rewrite_disabled(doc):
+            return
         pos = 0
-        lineno = 0
+        lineno = 1
         for item in mod.body:
             if (expect_docstring and isinstance(item, ast.Expr) and
                     isinstance(item.value, ast.Str)):
                 doc = item.value.s
-                if "PYTEST_DONT_REWRITE" in doc:
-                    # The module has disabled assertion rewriting.
+                if self.is_rewrite_disabled(doc):
                     return
-                lineno += len(doc) - 1
                 expect_docstring = False
             elif (not isinstance(item, ast.ImportFrom) or item.level > 0 or
                   item.module != "__future__"):
                 lineno = item.lineno
                 break
             pos += 1
+        else:
+            lineno = item.lineno
         imports = [ast.Import([alias], lineno=lineno, col_offset=0)
                    for alias in aliases]
         mod.body[pos:pos] = imports
@@ -636,6 +636,10 @@ class AssertionRewriter(ast.NodeVisitor):
                       # asserts.
                       not isinstance(field, ast.expr)):
                     nodes.append(field)
+
+    @staticmethod
+    def is_rewrite_disabled(docstring):
+        return "PYTEST_DONT_REWRITE" in docstring
 
     def variable(self):
         """Get a new variable."""
@@ -720,7 +724,7 @@ class AssertionRewriter(ast.NodeVisitor):
     def visit_Assert(self, assert_):
         """Return the AST statements to replace the ast.Assert instance.
 
-        This re-writes the test of an assertion to provide
+        This rewrites the test of an assertion to provide
         intermediate values and replace it with an if statement which
         raises an assertion error with a detailed explanation in case
         the expression is false.
@@ -912,7 +916,7 @@ class AssertionRewriter(ast.NodeVisitor):
     def visit_Compare(self, comp):
         self.push_format_context()
         left_res, left_expl = self.visit(comp.left)
-        if isinstance(comp.left, (_ast.Compare, _ast.BoolOp)):
+        if isinstance(comp.left, (ast.Compare, ast.BoolOp)):
             left_expl = "({0})".format(left_expl)
         res_variables = [self.variable() for i in range(len(comp.ops))]
         load_names = [ast.Name(v, ast.Load()) for v in res_variables]
@@ -923,7 +927,7 @@ class AssertionRewriter(ast.NodeVisitor):
         results = [left_res]
         for i, op, next_operand in it:
             next_res, next_expl = self.visit(next_operand)
-            if isinstance(next_operand, (_ast.Compare, _ast.BoolOp)):
+            if isinstance(next_operand, (ast.Compare, ast.BoolOp)):
                 next_expl = "({0})".format(next_expl)
             results.append(next_res)
             sym = binop_map[op.__class__]

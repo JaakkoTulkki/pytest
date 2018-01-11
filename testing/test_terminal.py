@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function
 import collections
 import sys
 
-import _pytest._pluggy as pluggy
+import pluggy
 import _pytest._code
 import py
 import pytest
@@ -24,12 +24,12 @@ class Option(object):
 
     @property
     def args(self):
-        l = []
+        values = []
         if self.verbose:
-            l.append('-v')
+            values.append('-v')
         if self.fulltrace:
-            l.append('--fulltrace')
-        return l
+            values.append('--fulltrace')
+        return values
 
 
 def pytest_generate_tests(metafunc):
@@ -78,7 +78,7 @@ class TestTerminal(object):
             ])
         else:
             result.stdout.fnmatch_lines([
-                "*test_pass_skip_fail.py .sF"
+                "*test_pass_skip_fail.py .sF*"
             ])
         result.stdout.fnmatch_lines([
             "    def test_func():",
@@ -142,12 +142,12 @@ class TestTerminal(object):
         """)
         result = testdir.runpytest(p2)
         result.stdout.fnmatch_lines([
-            "*test_p2.py .",
+            "*test_p2.py .*",
             "*1 passed*",
         ])
         result = testdir.runpytest("-v", p2)
         result.stdout.fnmatch_lines([
-            "*test_p2.py::TestMore::test_p1* <- *test_p1.py*PASSED",
+            "*test_p2.py::TestMore::test_p1* <- *test_p1.py*PASSED*",
         ])
 
     def test_itemreport_directclasses_not_shown_as_subclasses(self, testdir):
@@ -219,10 +219,10 @@ class TestTerminal(object):
         f = py.io.TextIO()
         monkeypatch.setattr(f, 'isatty', lambda *args: True)
         tr = TerminalReporter(config, f)
-        tr.writer.fullwidth = 10
+        tr._tw.fullwidth = 10
         tr.write('hello')
         tr.rewrite('hey', erase=True)
-        assert f.getvalue() == 'hello' + '\r' + 'hey' + (7 * ' ')
+        assert f.getvalue() == 'hello' + '\r' + 'hey' + (6 * ' ')
 
 
 class TestCollectonly(object):
@@ -326,7 +326,7 @@ def test_repr_python_version(monkeypatch):
     try:
         monkeypatch.setattr(sys, 'version_info', (2, 5, 1, 'final', 0))
         assert repr_pythonversion() == "2.5.1-final-0"
-        py.std.sys.version_info = x = (2, 3)
+        sys.version_info = x = (2, 3)
         assert repr_pythonversion() == str(x)
     finally:
         monkeypatch.undo()  # do this early as pytest can get confused
@@ -431,7 +431,7 @@ class TestTerminalFunctional(object):
                                       )
         result = testdir.runpytest("-k", "test_two:", testpath)
         result.stdout.fnmatch_lines([
-            "*test_deselected.py ..",
+            "*test_deselected.py ..*",
             "=* 1 test*deselected *=",
         ])
         assert result.ret == 0
@@ -464,7 +464,7 @@ class TestTerminalFunctional(object):
         finally:
             old.chdir()
         result.stdout.fnmatch_lines([
-            "test_passes.py ..",
+            "test_passes.py ..*",
             "* 2 pass*",
         ])
         assert result.ret == 0
@@ -475,13 +475,13 @@ class TestTerminalFunctional(object):
                 pass
         """)
         result = testdir.runpytest()
-        verinfo = ".".join(map(str, py.std.sys.version_info[:3]))
+        verinfo = ".".join(map(str, sys.version_info[:3]))
         result.stdout.fnmatch_lines([
             "*===== test session starts ====*",
             "platform %s -- Python %s*pytest-%s*py-%s*pluggy-%s" % (
-                py.std.sys.platform, verinfo,
+                sys.platform, verinfo,
                 pytest.__version__, py.__version__, pluggy.__version__),
-            "*test_header_trailer_info.py .",
+            "*test_header_trailer_info.py .*",
             "=* 1 passed*in *.[0-9][0-9] seconds *=",
         ])
         if pytest.config.pluginmanager.list_plugin_distinfo():
@@ -757,7 +757,6 @@ class TestGenericReporting(object):
         result.stdout.fnmatch_lines([
             "*def test_1():*",
             "*def test_2():*",
-            "*!! Interrupted: stopping after 2 failures*!!*",
             "*2 failed*",
         ])
 
@@ -965,3 +964,76 @@ def test_no_trailing_whitespace_after_inifile_word(testdir):
     testdir.makeini('[pytest]')
     result = testdir.runpytest('')
     assert 'inifile: tox.ini\n' in result.stdout.str()
+
+
+class TestProgress:
+
+    @pytest.fixture
+    def many_tests_file(self, testdir):
+        testdir.makepyfile(
+            test_bar="""
+                import pytest
+                @pytest.mark.parametrize('i', range(10))
+                def test_bar(i): pass
+            """,
+            test_foo="""
+                import pytest
+                @pytest.mark.parametrize('i', range(5))
+                def test_foo(i): pass
+            """,
+            test_foobar="""
+                import pytest
+                @pytest.mark.parametrize('i', range(5))
+                def test_foobar(i): pass
+            """,
+        )
+
+    def test_zero_tests_collected(self, testdir):
+        """Some plugins (testmon for example) might issue pytest_runtest_logreport without any tests being
+        actually collected (#2971)."""
+        testdir.makeconftest("""
+        def pytest_collection_modifyitems(items, config):
+            from _pytest.runner import CollectReport
+            for node_id in ('nodeid1', 'nodeid2'):
+                rep = CollectReport(node_id, 'passed', None, None)
+                rep.when = 'passed'
+                rep.duration = 0.1
+                config.hook.pytest_runtest_logreport(report=rep)
+        """)
+        output = testdir.runpytest()
+        assert 'ZeroDivisionError' not in output.stdout.str()
+        output.stdout.fnmatch_lines([
+            '=* 2 passed in *=',
+        ])
+
+    def test_normal(self, many_tests_file, testdir):
+        output = testdir.runpytest()
+        output.stdout.re_match_lines([
+            r'test_bar.py \.{10} \s+ \[ 50%\]',
+            r'test_foo.py \.{5} \s+ \[ 75%\]',
+            r'test_foobar.py \.{5} \s+ \[100%\]',
+        ])
+
+    def test_verbose(self, many_tests_file, testdir):
+        output = testdir.runpytest('-v')
+        output.stdout.re_match_lines([
+            r'test_bar.py::test_bar\[0\] PASSED \s+ \[  5%\]',
+            r'test_foo.py::test_foo\[4\] PASSED \s+ \[ 75%\]',
+            r'test_foobar.py::test_foobar\[4\] PASSED \s+ \[100%\]',
+        ])
+
+    def test_xdist_normal(self, many_tests_file, testdir):
+        pytest.importorskip('xdist')
+        output = testdir.runpytest('-n2')
+        output.stdout.re_match_lines([
+            r'\.{20} \s+ \[100%\]',
+        ])
+
+    def test_xdist_verbose(self, many_tests_file, testdir):
+        pytest.importorskip('xdist')
+        output = testdir.runpytest('-n2', '-v')
+        output.stdout.re_match_lines_random([
+            r'\[gw\d\] \[\s*\d+%\] PASSED test_bar.py::test_bar\[1\]',
+            r'\[gw\d\] \[\s*\d+%\] PASSED test_foo.py::test_foo\[1\]',
+            r'\[gw\d\] \[\s*\d+%\] PASSED test_foobar.py::test_foobar\[1\]',
+        ])

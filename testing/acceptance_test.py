@@ -2,6 +2,9 @@
 from __future__ import absolute_import, division, print_function
 import os
 import sys
+import types
+
+import six
 
 import _pytest._code
 import py
@@ -215,8 +218,8 @@ class TestGeneralUsage(object):
         assert not result.ret
 
     def test_issue109_sibling_conftests_not_loaded(self, testdir):
-        sub1 = testdir.tmpdir.mkdir("sub1")
-        sub2 = testdir.tmpdir.mkdir("sub2")
+        sub1 = testdir.mkdir("sub1")
+        sub2 = testdir.mkdir("sub2")
         sub1.join("conftest.py").write("assert 0")
         result = testdir.runpytest(sub2)
         assert result.ret == EXIT_NOTESTSCOLLECTED
@@ -344,7 +347,7 @@ class TestGeneralUsage(object):
         Importing a module that didn't exist, even if the ImportError was
         gracefully handled, would make our test crash.
 
-        Use recwarn here to silence this warning in Python 2.6 and 2.7:
+        Use recwarn here to silence this warning in Python 2.7:
             ImportWarning: Not importing directory '...\not_a_package': missing __init__.py
         """
         testdir.mkdir('not_a_package')
@@ -396,7 +399,7 @@ class TestGeneralUsage(object):
 
         p = tmpdir.join('test_test_plugins_given_as_strings.py')
         p.write('def test_foo(): pass')
-        mod = py.std.types.ModuleType("myplugin")
+        mod = types.ModuleType("myplugin")
         monkeypatch.setitem(sys.modules, 'myplugin', mod)
         assert pytest.main(args=[str(tmpdir)], plugins=['myplugin']) == 0
 
@@ -415,17 +418,17 @@ class TestGeneralUsage(object):
         ])
 
     def test_parametrized_with_null_bytes(self, testdir):
-        """Test parametrization with values that contain null bytes and unicode characters (#2644)"""
+        """Test parametrization with values that contain null bytes and unicode characters (#2644, #2957)"""
         p = testdir.makepyfile(u"""
             # encoding: UTF-8
             import pytest
 
-            @pytest.mark.parametrize("data", ["\\x00", u'ação'])
+            @pytest.mark.parametrize("data", [b"\\x00", "\\x00", u'ação'])
             def test_foo(data):
                 assert data
         """)
         res = testdir.runpytest(p)
-        res.assert_outcomes(passed=2)
+        res.assert_outcomes(passed=3)
 
 
 class TestInvocationVariants(object):
@@ -490,17 +493,17 @@ class TestInvocationVariants(object):
 
     def test_python_minus_m_invocation_ok(self, testdir):
         p1 = testdir.makepyfile("def test_hello(): pass")
-        res = testdir.run(py.std.sys.executable, "-m", "pytest", str(p1))
+        res = testdir.run(sys.executable, "-m", "pytest", str(p1))
         assert res.ret == 0
 
     def test_python_minus_m_invocation_fail(self, testdir):
         p1 = testdir.makepyfile("def test_fail(): 0/0")
-        res = testdir.run(py.std.sys.executable, "-m", "pytest", str(p1))
+        res = testdir.run(sys.executable, "-m", "pytest", str(p1))
         assert res.ret == 1
 
     def test_python_pytest_package(self, testdir):
         p1 = testdir.makepyfile("def test_pass(): pass")
-        res = testdir.run(py.std.sys.executable, "-m", "pytest", str(p1))
+        res = testdir.run(sys.executable, "-m", "pytest", str(p1))
         assert res.ret == 0
         res.stdout.fnmatch_lines(["*1 passed*"])
 
@@ -558,7 +561,7 @@ class TestInvocationVariants(object):
         ])
 
         def join_pythonpath(what):
-            cur = py.std.os.environ.get('PYTHONPATH')
+            cur = os.environ.get('PYTHONPATH')
             if cur:
                 return str(what) + os.pathsep + cur
             return what
@@ -603,11 +606,11 @@ class TestInvocationVariants(object):
         # The structure of the test directory is now:
         # .
         # ├── hello
-        # │   └── ns_pkg
-        # │       ├── __init__.py
-        # │       └── hello
-        # │           ├── __init__.py
-        # │           └── test_hello.py
+        # │   └── ns_pkg
+        # │       ├── __init__.py
+        # │       └── hello
+        # │           ├── __init__.py
+        # │           └── test_hello.py
         # └── world
         #     └── ns_pkg
         #         ├── __init__.py
@@ -616,7 +619,7 @@ class TestInvocationVariants(object):
         #             └── test_world.py
 
         def join_pythonpath(*dirs):
-            cur = py.std.os.environ.get('PYTHONPATH')
+            cur = os.environ.get('PYTHONPATH')
             if cur:
                 dirs += (cur,)
             return os.pathsep.join(str(p) for p in dirs)
@@ -625,22 +628,94 @@ class TestInvocationVariants(object):
             monkeypatch.syspath_prepend(p)
 
         # mixed module and filenames:
-        result = testdir.runpytest("--pyargs", "-v", "ns_pkg.hello", "world/ns_pkg")
+        os.chdir('world')
+        result = testdir.runpytest("--pyargs", "-v", "ns_pkg.hello", "ns_pkg/world")
         assert result.ret == 0
         result.stdout.fnmatch_lines([
-            "*test_hello.py::test_hello*PASSED",
-            "*test_hello.py::test_other*PASSED",
-            "*test_world.py::test_world*PASSED",
-            "*test_world.py::test_other*PASSED",
+            "*test_hello.py::test_hello*PASSED*",
+            "*test_hello.py::test_other*PASSED*",
+            "*test_world.py::test_world*PASSED*",
+            "*test_world.py::test_other*PASSED*",
             "*4 passed*"
         ])
 
         # specify tests within a module
+        testdir.chdir()
         result = testdir.runpytest("--pyargs", "-v", "ns_pkg.world.test_world::test_other")
         assert result.ret == 0
         result.stdout.fnmatch_lines([
-            "*test_world.py::test_other*PASSED",
+            "*test_world.py::test_other*PASSED*",
             "*1 passed*"
+        ])
+
+    @pytest.mark.skipif(not hasattr(os, "symlink"), reason="requires symlinks")
+    def test_cmdline_python_package_symlink(self, testdir, monkeypatch):
+        """
+        test --pyargs option with packages with path containing symlink can
+        have conftest.py in their package (#2985)
+        """
+        # dummy check that we can actually create symlinks: on Windows `os.symlink` is available,
+        # but normal users require special admin privileges to create symlinks.
+        if sys.platform == 'win32':
+            try:
+                os.symlink(str(testdir.tmpdir.ensure('tmpfile')), str(testdir.tmpdir.join('tmpfile2')))
+            except OSError as e:
+                pytest.skip(six.text_type(e.args[0]))
+        monkeypatch.delenv('PYTHONDONTWRITEBYTECODE', raising=False)
+
+        search_path = ["lib", os.path.join("local", "lib")]
+
+        dirname = "lib"
+        d = testdir.mkdir(dirname)
+        foo = d.mkdir("foo")
+        foo.ensure("__init__.py")
+        lib = foo.mkdir('bar')
+        lib.ensure("__init__.py")
+        lib.join("test_bar.py"). \
+            write("def test_bar(): pass\n"
+                  "def test_other(a_fixture):pass")
+        lib.join("conftest.py"). \
+            write("import pytest\n"
+                  "@pytest.fixture\n"
+                  "def a_fixture():pass")
+
+        d_local = testdir.mkdir("local")
+        symlink_location = os.path.join(str(d_local), "lib")
+        if six.PY2:
+            os.symlink(str(d), symlink_location)
+        else:
+            os.symlink(str(d), symlink_location, target_is_directory=True)
+
+        # The structure of the test directory is now:
+        # .
+        # ├── local
+        # │   └── lib -> ../lib
+        # └── lib
+        #     └── foo
+        #         ├── __init__.py
+        #         └── bar
+        #             ├── __init__.py
+        #             ├── conftest.py
+        #             └── test_bar.py
+
+        def join_pythonpath(*dirs):
+            cur = os.getenv('PYTHONPATH')
+            if cur:
+                dirs += (cur,)
+            return os.pathsep.join(str(p) for p in dirs)
+
+        monkeypatch.setenv('PYTHONPATH', join_pythonpath(*search_path))
+        for p in search_path:
+            monkeypatch.syspath_prepend(p)
+
+        # module picked up in symlink-ed directory:
+        result = testdir.runpytest("--pyargs", "-v", "foo.bar")
+        testdir.chdir()
+        assert result.ret == 0
+        result.stdout.fnmatch_lines([
+            "*lib/foo/bar/test_bar.py::test_bar*PASSED*",
+            "*lib/foo/bar/test_bar.py::test_other*PASSED*",
+            "*2 passed*"
         ])
 
     def test_cmdline_python_package_not_exists(self, testdir):
@@ -846,3 +921,46 @@ def test_deferred_hook_checking(testdir):
     })
     result = testdir.runpytest()
     result.stdout.fnmatch_lines(['* 1 passed *'])
+
+
+def test_fixture_values_leak(testdir):
+    """Ensure that fixture objects are properly destroyed by the garbage collector at the end of their expected
+    life-times (#2981).
+    """
+    testdir.makepyfile("""
+        import attr
+        import gc
+        import pytest
+        import weakref
+
+        @attr.s
+        class SomeObj(object):
+            name = attr.ib()
+
+        fix_of_test1_ref = None
+        session_ref = None
+
+        @pytest.fixture(scope='session')
+        def session_fix():
+            global session_ref
+            obj = SomeObj(name='session-fixture')
+            session_ref = weakref.ref(obj)
+            return obj
+
+        @pytest.fixture
+        def fix(session_fix):
+            global fix_of_test1_ref
+            obj = SomeObj(name='local-fixture')
+            fix_of_test1_ref = weakref.ref(obj)
+            return obj
+
+        def test1(fix):
+            assert fix_of_test1_ref() is fix
+
+        def test2():
+            gc.collect()
+            # fixture "fix" created during test1 must have been destroyed by now
+            assert fix_of_test1_ref() is None
+    """)
+    result = testdir.runpytest()
+    result.stdout.fnmatch_lines(['* 2 passed *'])

@@ -9,7 +9,6 @@ import _pytest._code
 from _pytest.config import hookimpl
 from _pytest.outcomes import fail, skip, xfail
 from _pytest.python import transfer_markers, Class, Module, Function
-from _pytest.skipping import MarkEvaluator
 
 
 def pytest_pycollect_makeitem(collector, name, obj):
@@ -109,13 +108,13 @@ class TestCaseFunction(Function):
         except TypeError:
             try:
                 try:
-                    l = traceback.format_exception(*rawexcinfo)
-                    l.insert(0, "NOTE: Incompatible Exception Representation, "
-                                "displaying natively:\n\n")
-                    fail("".join(l), pytrace=False)
+                    values = traceback.format_exception(*rawexcinfo)
+                    values.insert(0, "NOTE: Incompatible Exception Representation, "
+                                  "displaying natively:\n\n")
+                    fail("".join(values), pytrace=False)
                 except (fail.Exception, KeyboardInterrupt):
                     raise
-                except:
+                except:  # noqa
                     fail("ERROR: Unknown Incompatible Exception "
                          "representation:\n%r" % (rawexcinfo,), pytrace=False)
             except KeyboardInterrupt:
@@ -134,8 +133,7 @@ class TestCaseFunction(Function):
         try:
             skip(reason)
         except skip.Exception:
-            self._evalskip = MarkEvaluator(self, 'SkipTest')
-            self._evalskip.result = True
+            self._skipped_by_mark = True
             self._addexcinfo(sys.exc_info())
 
     def addExpectedFailure(self, testcase, rawexcinfo, reason=""):

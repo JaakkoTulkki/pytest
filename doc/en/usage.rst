@@ -17,7 +17,7 @@ You can invoke testing through the Python interpreter from the command line::
     python -m pytest [...]
 
 This is almost equivalent to invoking the command line script ``pytest [...]``
-directly, except that Python will also add the current directory to ``sys.path``.
+directly, except that calling via ``python`` will also add the current directory to ``sys.path``.
 
 Possible exit codes
 --------------------------------------------------------------
@@ -188,7 +188,6 @@ in your code and pytest automatically disables its output capture for that test:
   instead get sent directly to ``sys.stdout``. Note that this holds true even
   for test output occurring after you exit the interactive PDB_ tracing session
   and continue with the regular test run.
-
 
 .. _durations:
 

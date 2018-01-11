@@ -1,5 +1,7 @@
 from __future__ import absolute_import, division, print_function
+import inspect
 import sys
+import traceback
 from inspect import CO_VARARGS, CO_VARKEYWORDS
 import re
 from weakref import ref
@@ -7,8 +9,6 @@ from _pytest.compat import _PY2, _PY3, PY35, safe_str
 
 import py
 builtin_repr = repr
-
-reprlib = py.builtin._tryimport('repr', 'reprlib')
 
 if _PY3:
     from traceback import format_exception_only
@@ -235,7 +235,7 @@ class TracebackEntry(object):
             except KeyError:
                 return False
 
-        if py.builtin.callable(tbh):
+        if callable(tbh):
             return tbh(None if self._excinfo is None else self._excinfo())
         else:
             return tbh
@@ -250,7 +250,7 @@ class TracebackEntry(object):
             line = str(self.statement).lstrip()
         except KeyboardInterrupt:
             raise
-        except:
+        except:  # noqa
             line = "???"
         return "  File %r:%d in %s\n  %s\n" % (fn, self.lineno + 1, name, line)
 
@@ -338,16 +338,16 @@ class Traceback(list):
             # XXX needs a test
             key = entry.frame.code.path, id(entry.frame.code.raw), entry.lineno
             # print "checking for recursion at", key
-            l = cache.setdefault(key, [])
-            if l:
+            values = cache.setdefault(key, [])
+            if values:
                 f = entry.frame
                 loc = f.f_locals
-                for otherloc in l:
+                for otherloc in values:
                     if f.is_true(f.eval(co_equal,
                                         __recursioncache_locals_1=loc,
                                         __recursioncache_locals_2=otherloc)):
                         return i
-            l.append(entry.frame.f_locals)
+            values.append(entry.frame.f_locals)
         return None
 
 
@@ -424,7 +424,7 @@ class ExceptionInfo(object):
         """
         if style == 'native':
             return ReprExceptionInfo(ReprTracebackNative(
-                py.std.traceback.format_exception(
+                traceback.format_exception(
                     self.type,
                     self.value,
                     self.traceback[0]._rawentry,
@@ -478,12 +478,12 @@ class FormattedExcinfo(object):
             s = str(source.getstatement(len(source) - 1))
         except KeyboardInterrupt:
             raise
-        except:
+        except:  # noqa
             try:
                 s = str(source[-1])
             except KeyboardInterrupt:
                 raise
-            except:
+            except:  # noqa
                 return 0
         return 4 + (len(s) - len(s.lstrip()))
 
@@ -558,7 +558,7 @@ class FormattedExcinfo(object):
                     # else:
                     #    self._line("%-10s =\\" % (name,))
                     #    # XXX
-                    #    py.std.pprint.pprint(value, stream=self.excinfowriter)
+                    #    pprint.pprint(value, stream=self.excinfowriter)
             return ReprLocals(lines)
 
     def repr_traceback_entry(self, entry, excinfo=None):
@@ -671,7 +671,7 @@ class FormattedExcinfo(object):
                 else:
                     # fallback to native repr if the exception doesn't have a traceback:
                     # ExceptionInfo objects require a full traceback to work
-                    reprtraceback = ReprTracebackNative(py.std.traceback.format_exception(type(e), e, None))
+                    reprtraceback = ReprTracebackNative(traceback.format_exception(type(e), e, None))
                     reprcrash = None
 
                 repr_chain += [(reprtraceback, reprcrash, descr)]
@@ -888,7 +888,7 @@ def getrawcode(obj, trycall=True):
         obj = getattr(obj, 'f_code', obj)
         obj = getattr(obj, '__code__', obj)
         if trycall and not hasattr(obj, 'co_firstlineno'):
-            if hasattr(obj, '__call__') and not py.std.inspect.isclass(obj):
+            if hasattr(obj, '__call__') and not inspect.isclass(obj):
                 x = getrawcode(obj.__call__, trycall=False)
                 if hasattr(x, 'co_firstlineno'):
                     return x

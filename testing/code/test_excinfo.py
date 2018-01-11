@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function
 
-import sys
 import operator
+import os
+import sys
 import _pytest
 import py
 import pytest
@@ -77,8 +78,8 @@ def test_excinfo_getstatement():
     linenumbers = [_pytest._code.getrawcode(f).co_firstlineno - 1 + 4,
                    _pytest._code.getrawcode(f).co_firstlineno - 1 + 1,
                    _pytest._code.getrawcode(g).co_firstlineno - 1 + 1, ]
-    l = list(excinfo.traceback)
-    foundlinenumbers = [x.lineno for x in l]
+    values = list(excinfo.traceback)
+    foundlinenumbers = [x.lineno for x in values]
     assert foundlinenumbers == linenumbers
     # for x in info:
     #    print "%s:%d  %s" %(x.path.relto(root), x.lineno, x.statement)
@@ -244,7 +245,7 @@ class TestTraceback_f_g_h(object):
         def f(n):
             try:
                 do_stuff()
-            except:
+            except:  # noqa
                 reraise_me()
 
         excinfo = pytest.raises(RuntimeError, f, 8)
@@ -345,10 +346,7 @@ def test_excinfo_no_sourcecode():
     except ValueError:
         excinfo = _pytest._code.ExceptionInfo()
     s = str(excinfo.traceback[-1])
-    if py.std.sys.version_info < (2, 5):
-        assert s == "  File '<string>':1 in ?\n  ???\n"
-    else:
-        assert s == "  File '<string>':1 in <module>\n  ???\n"
+    assert s == "  File '<string>':1 in <module>\n  ???\n"
 
 
 def test_excinfo_no_python_sourcecode(tmpdir):
@@ -434,7 +432,7 @@ class TestFormattedExcinfo(object):
             exec(source.compile())
         except KeyboardInterrupt:
             raise
-        except:
+        except:  # noqa
             return _pytest._code.ExceptionInfo()
         assert 0, "did not raise"
 
@@ -476,7 +474,7 @@ class TestFormattedExcinfo(object):
             excinfo = _pytest._code.ExceptionInfo()
         repr = pr.repr_excinfo(excinfo)
         assert repr.reprtraceback.reprentries[1].lines[0] == ">   ???"
-        if py.std.sys.version_info[0] >= 3:
+        if sys.version_info[0] >= 3:
             assert repr.chain[0][0].reprentries[1].lines[0] == ">   ???"
 
     def test_repr_many_line_source_not_existing(self):
@@ -491,7 +489,7 @@ raise ValueError()
             excinfo = _pytest._code.ExceptionInfo()
         repr = pr.repr_excinfo(excinfo)
         assert repr.reprtraceback.reprentries[1].lines[0] == ">   ???"
-        if py.std.sys.version_info[0] >= 3:
+        if sys.version_info[0] >= 3:
             assert repr.chain[0][0].reprentries[1].lines[0] == ">   ???"
 
     def test_repr_source_failing_fullsource(self):
@@ -546,16 +544,16 @@ raise ValueError()
         tb = FakeRawTB()
         excinfo.traceback = Traceback(tb)
 
-        fail = IOError()  # noqa
+        fail = IOError()
         repr = pr.repr_excinfo(excinfo)
         assert repr.reprtraceback.reprentries[0].lines[0] == ">   ???"
-        if py.std.sys.version_info[0] >= 3:
+        if sys.version_info[0] >= 3:
             assert repr.chain[0][0].reprentries[0].lines[0] == ">   ???"
 
         fail = py.error.ENOENT  # noqa
         repr = pr.repr_excinfo(excinfo)
         assert repr.reprtraceback.reprentries[0].lines[0] == ">   ???"
-        if py.std.sys.version_info[0] >= 3:
+        if sys.version_info[0] >= 3:
             assert repr.chain[0][0].reprentries[0].lines[0] == ">   ???"
 
     def test_repr_local(self):
@@ -742,7 +740,7 @@ raise ValueError()
             repr = p.repr_excinfo(excinfo)
             assert repr.reprtraceback
             assert len(repr.reprtraceback.reprentries) == len(reprtb.reprentries)
-            if py.std.sys.version_info[0] >= 3:
+            if sys.version_info[0] >= 3:
                 assert repr.chain[0][0]
                 assert len(repr.chain[0][0].reprentries) == len(reprtb.reprentries)
             assert repr.reprcrash.path.endswith("mod.py")
@@ -762,7 +760,7 @@ raise ValueError()
         def raiseos():
             raise OSError(2)
 
-        monkeypatch.setattr(py.std.os, 'getcwd', raiseos)
+        monkeypatch.setattr(os, 'getcwd', raiseos)
         assert p._makepath(__file__) == __file__
         p.repr_traceback(excinfo)
 
@@ -820,10 +818,10 @@ raise ValueError()
         for style in ("short", "long", "no"):
             for showlocals in (True, False):
                 repr = excinfo.getrepr(style=style, showlocals=showlocals)
-                if py.std.sys.version_info[0] < 3:
+                if sys.version_info[0] < 3:
                     assert isinstance(repr, ReprExceptionInfo)
                 assert repr.reprtraceback.style == style
-                if py.std.sys.version_info[0] >= 3:
+                if sys.version_info[0] >= 3:
                     assert isinstance(repr, ExceptionChainRepr)
                     for repr in repr.chain:
                         assert repr[0].style == style
@@ -1217,7 +1215,7 @@ def test_exception_repr_extraction_error_on_recursion():
 
     try:
         a(numpy_like())
-    except:
+    except:  # noqa
         from _pytest._code.code import ExceptionInfo
         from _pytest.pytester import LineMatcher
         exc_info = ExceptionInfo()
@@ -1241,12 +1239,9 @@ def test_no_recursion_index_on_recursion_error():
                 return getattr(self, '_' + attr)
 
         RecursionDepthError().trigger
-    except:
+    except:  # noqa
         from _pytest._code.code import ExceptionInfo
         exc_info = ExceptionInfo()
-        if sys.version_info[:2] == (2, 6):
-            assert "'RecursionDepthError' object has no attribute '___" in str(exc_info.getrepr())
-        else:
-            assert 'maximum recursion' in str(exc_info.getrepr())
+        assert 'maximum recursion' in str(exc_info.getrepr())
     else:
         assert 0

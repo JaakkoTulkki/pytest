@@ -84,11 +84,11 @@ def test_conftest_in_nonpkg_with_init(tmpdir):
 
 def test_doubledash_considered(testdir):
     conf = testdir.mkdir("--option")
-    conf.join("conftest.py").ensure()
+    conf.ensure("conftest.py")
     conftest = PytestPluginManager()
     conftest_setinitial(conftest, [conf.basename, conf.basename])
-    l = conftest._getconftestmodules(conf)
-    assert len(l) == 1
+    values = conftest._getconftestmodules(conf)
+    assert len(values) == 1
 
 
 def test_issue151_load_all_conftests(testdir):
@@ -130,28 +130,28 @@ def test_conftestcutdir(testdir):
     p = testdir.mkdir("x")
     conftest = PytestPluginManager()
     conftest_setinitial(conftest, [testdir.tmpdir], confcutdir=p)
-    l = conftest._getconftestmodules(p)
-    assert len(l) == 0
-    l = conftest._getconftestmodules(conf.dirpath())
-    assert len(l) == 0
+    values = conftest._getconftestmodules(p)
+    assert len(values) == 0
+    values = conftest._getconftestmodules(conf.dirpath())
+    assert len(values) == 0
     assert conf not in conftest._conftestpath2mod
     # but we can still import a conftest directly
     conftest._importconftest(conf)
-    l = conftest._getconftestmodules(conf.dirpath())
-    assert l[0].__file__.startswith(str(conf))
+    values = conftest._getconftestmodules(conf.dirpath())
+    assert values[0].__file__.startswith(str(conf))
     # and all sub paths get updated properly
-    l = conftest._getconftestmodules(p)
-    assert len(l) == 1
-    assert l[0].__file__.startswith(str(conf))
+    values = conftest._getconftestmodules(p)
+    assert len(values) == 1
+    assert values[0].__file__.startswith(str(conf))
 
 
 def test_conftestcutdir_inplace_considered(testdir):
     conf = testdir.makeconftest("")
     conftest = PytestPluginManager()
     conftest_setinitial(conftest, [conf.dirpath()], confcutdir=conf.dirpath())
-    l = conftest._getconftestmodules(conf.dirpath())
-    assert len(l) == 1
-    assert l[0].__file__.startswith(str(conf))
+    values = conftest._getconftestmodules(conf.dirpath())
+    assert len(values) == 1
+    assert values[0].__file__.startswith(str(conf))
 
 
 @pytest.mark.parametrize("name", 'test tests whatever .dotdir'.split())
@@ -232,7 +232,7 @@ def test_fixture_dependency(testdir, monkeypatch):
     ct1.write("")
     sub = testdir.mkdir("sub")
     sub.join("__init__.py").write("")
-    sub.join("conftest.py").write(py.std.textwrap.dedent("""
+    sub.join("conftest.py").write(dedent("""
         import pytest
 
         @pytest.fixture
@@ -249,7 +249,7 @@ def test_fixture_dependency(testdir, monkeypatch):
     """))
     subsub = sub.mkdir("subsub")
     subsub.join("__init__.py").write("")
-    subsub.join("test_bar.py").write(py.std.textwrap.dedent("""
+    subsub.join("test_bar.py").write(dedent("""
         import pytest
 
         @pytest.fixture
@@ -265,16 +265,12 @@ def test_fixture_dependency(testdir, monkeypatch):
 
 def test_conftest_found_with_double_dash(testdir):
     sub = testdir.mkdir("sub")
-    sub.join("conftest.py").write(py.std.textwrap.dedent("""
+    sub.join("conftest.py").write(dedent("""
         def pytest_addoption(parser):
             parser.addoption("--hello-world", action="store_true")
     """))
     p = sub.join("test_hello.py")
-    p.write(py.std.textwrap.dedent("""
-        import pytest
-        def test_hello(found):
-            assert found == 1
-    """))
+    p.write("def test_hello(): pass")
     result = testdir.runpytest(str(p) + "::test_hello", "-h")
     result.stdout.fnmatch_lines("""
         *--hello-world*

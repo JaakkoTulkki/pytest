@@ -144,6 +144,8 @@ def test_unicode(testdir, pyfile_with_warnings):
 @pytest.mark.skipif(sys.version_info >= (3, 0),
                     reason='warnings message is broken as it is not str instance')
 def test_py2_unicode(testdir, pyfile_with_warnings):
+    if getattr(sys, "pypy_version_info", ())[:2] == (5, 9) and sys.platform.startswith('win'):
+        pytest.xfail("fails with unicode error on PyPy2 5.9 and Windows (#2905)")
     testdir.makepyfile('''
         # -*- coding: utf8 -*-
         import warnings
@@ -163,10 +165,30 @@ def test_py2_unicode(testdir, pyfile_with_warnings):
     result.stdout.fnmatch_lines([
         '*== %s ==*' % WARNINGS_SUMMARY_HEADER,
 
-        '*test_py2_unicode.py:8: UserWarning: \u6d4b\u8bd5',
+        '*test_py2_unicode.py:8: UserWarning: \\u6d4b\\u8bd5',
         '*warnings.warn(u"\u6d4b\u8bd5")',
         '*warnings.py:*: UnicodeWarning: Warning is using unicode non*',
         '* 1 passed, 2 warnings*',
+    ])
+
+
+def test_py2_unicode_ascii(testdir):
+    """Ensure that our warning about 'unicode warnings containing non-ascii messages'
+    does not trigger with ascii-convertible messages"""
+    testdir.makeini('[pytest]')
+    testdir.makepyfile('''
+        import pytest
+        import warnings
+
+        @pytest.mark.filterwarnings('always')
+        def test_func():
+            warnings.warn(u"hello")
+    ''')
+    result = testdir.runpytest()
+    result.stdout.fnmatch_lines([
+        '*== %s ==*' % WARNINGS_SUMMARY_HEADER,
+        '*warnings.warn(u"hello")',
+        '* 1 passed, 1 warnings in*'
     ])
 
 
@@ -221,3 +243,16 @@ def test_filterwarnings_mark(testdir, default_config):
     """)
     result = testdir.runpytest('-W always' if default_config == 'cmdline' else '')
     result.stdout.fnmatch_lines(['*= 1 failed, 2 passed, 1 warnings in *'])
+
+
+def test_non_string_warning_argument(testdir):
+    """Non-str argument passed to warning breaks pytest (#2956)"""
+    testdir.makepyfile("""
+        import warnings
+        import pytest
+
+        def test():
+            warnings.warn(UserWarning(1, u'foo'))
+    """)
+    result = testdir.runpytest('-W', 'always')
+    result.stdout.fnmatch_lines(['*= 1 passed, 1 warnings in *'])

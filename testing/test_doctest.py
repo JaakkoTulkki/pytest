@@ -173,7 +173,7 @@ class TestDoctests(object):
             "*UNEXPECTED*ZeroDivision*",
         ])
 
-    def test_docstring_context_around_error(self, testdir):
+    def test_docstring_partial_context_around_error(self, testdir):
         """Test that we show some context before the actual line of a failing
         doctest.
         """
@@ -199,7 +199,7 @@ class TestDoctests(object):
         ''')
         result = testdir.runpytest('--doctest-modules')
         result.stdout.fnmatch_lines([
-            '*docstring_context_around_error*',
+            '*docstring_partial_context_around_error*',
             '005*text-line-3',
             '006*text-line-4',
             '013*text-line-11',
@@ -212,6 +212,32 @@ class TestDoctests(object):
         # lines below should be trimmed out
         assert 'text-line-2' not in result.stdout.str()
         assert 'text-line-after' not in result.stdout.str()
+
+    def test_docstring_full_context_around_error(self, testdir):
+        """Test that we show the whole context before the actual line of a failing
+        doctest, provided that the context is up to 10 lines long.
+        """
+        testdir.makepyfile('''
+            def foo():
+                """
+                text-line-1
+                text-line-2
+
+                >>> 1 + 1
+                3
+                """
+        ''')
+        result = testdir.runpytest('--doctest-modules')
+        result.stdout.fnmatch_lines([
+            '*docstring_full_context_around_error*',
+            '003*text-line-1',
+            '004*text-line-2',
+            '006*>>> 1 + 1',
+            'Expected:',
+            '    3',
+            'Got:',
+            '    2',
+        ])
 
     def test_doctest_linedata_missing(self, testdir):
         testdir.tmpdir.join('hello.py').write(_pytest._code.Source("""
@@ -560,6 +586,34 @@ class TestDoctests(object):
         items, reprec = testdir.inline_genitems(p, '--doctest-modules')
         reportinfo = items[0].reportinfo()
         assert reportinfo[1] == 1
+
+    def test_valid_setup_py(self, testdir):
+        '''
+        Test to make sure that pytest ignores valid setup.py files when ran
+        with --doctest-modules
+        '''
+        p = testdir.makepyfile(setup="""
+            from setuptools import setup, find_packages
+            setup(name='sample',
+                  version='0.0',
+                  description='description',
+                  packages=find_packages()
+            )
+        """)
+        result = testdir.runpytest(p, '--doctest-modules')
+        result.stdout.fnmatch_lines(['*collected 0 items*'])
+
+    def test_invalid_setup_py(self, testdir):
+        '''
+        Test to make sure that pytest reads setup.py files that are not used
+        for python packages when ran with --doctest-modules
+        '''
+        p = testdir.makepyfile(setup="""
+            def test_foo():
+                return 'bar'
+        """)
+        result = testdir.runpytest(p, '--doctest-modules')
+        result.stdout.fnmatch_lines(['*collected 1 item*'])
 
 
 class TestLiterals(object):

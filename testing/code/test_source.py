@@ -2,19 +2,17 @@
 # disable flake check on this file because some constructs are strange
 # or redundant on purpose and can't be disable on a line-by-line basis
 from __future__ import absolute_import, division, print_function
+import inspect
 import sys
 
 import _pytest._code
 import py
 import pytest
 from _pytest._code import Source
-from _pytest._code.source import _ast
+from _pytest._code.source import ast
 
-if _ast is not None:
-    astonly = pytest.mark.nothing
-else:
-    astonly = pytest.mark.xfail("True", reason="only works with AST-compile")
 
+astonly = pytest.mark.nothing
 failsonjython = pytest.mark.xfail("sys.platform.startswith('java')")
 
 
@@ -155,8 +153,8 @@ class TestAccesses(object):
         assert len(self.source) == 4
 
     def test_iter(self):
-        l = [x for x in self.source]
-        assert len(l) == 4
+        values = [x for x in self.source]
+        assert len(values) == 4
 
 
 class TestSourceParsingAndCompiling(object):
@@ -190,9 +188,9 @@ class TestSourceParsingAndCompiling(object):
             def f():
                 raise ValueError()
         """)
-        source1 = py.std.inspect.getsource(co1)
+        source1 = inspect.getsource(co1)
         assert 'KeyError' in source1
-        source2 = py.std.inspect.getsource(co2)
+        source2 = inspect.getsource(co2)
         assert 'ValueError' in source2
 
     def test_getstatement(self):
@@ -273,7 +271,6 @@ class TestSourceParsingAndCompiling(object):
         assert getstatement(2, source).lines == source.lines[2:3]
         assert getstatement(3, source).lines == source.lines[3:4]
 
-    @pytest.mark.skipif("sys.version_info < (2,6)")
     def test_getstatementrange_out_of_bounds_py3(self):
         source = Source("if xxx:\n   from .collections import something")
         r = source.getstatementrange(1)
@@ -283,7 +280,6 @@ class TestSourceParsingAndCompiling(object):
         source = Source(":")
         pytest.raises(SyntaxError, lambda: source.getstatementrange(0))
 
-    @pytest.mark.skipif("sys.version_info < (2,6)")
     def test_compile_to_ast(self):
         import ast
         source = Source("x = 4")
@@ -331,8 +327,8 @@ def test_getstartingblock_singleline():
 
     x = A('x', 'y')
 
-    l = [i for i in x.source.lines if i.strip()]
-    assert len(l) == 1
+    values = [i for i in x.source.lines if i.strip()]
+    assert len(values) == 1
 
 
 def test_getline_finally():
@@ -378,7 +374,6 @@ def test_deindent():
         c = '''while True:
     pass
 '''
-    import inspect
     lines = deindent(inspect.getsource(f).splitlines())
     assert lines == ["def f():", "    c = '''while True:", "    pass", "'''"]
 
@@ -391,7 +386,6 @@ def test_deindent():
     assert lines == ['', 'def f():', '    def g():', '        pass', '    ']
 
 
-@pytest.mark.xfail("sys.version_info[:3] < (2,7,0)")
 def test_source_of_class_at_eof_without_newline(tmpdir):
     # this test fails because the implicit inspect.getsource(A) below
     # does not return the "x = 1" last line.
@@ -467,7 +461,7 @@ def test_getfslineno():
 
     fspath, lineno = getfslineno(A)
 
-    _, A_lineno = py.std.inspect.findsource(A)
+    _, A_lineno = inspect.findsource(A)
     assert fspath.basename == "test_source.py"
     assert lineno == A_lineno
 

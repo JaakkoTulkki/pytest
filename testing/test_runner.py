@@ -2,10 +2,12 @@
 from __future__ import absolute_import, division, print_function
 
 import _pytest._code
+import inspect
 import os
 import py
 import pytest
 import sys
+import types
 from _pytest import runner, main, outcomes
 
 
@@ -13,12 +15,12 @@ class TestSetupState(object):
     def test_setup(self, testdir):
         ss = runner.SetupState()
         item = testdir.getitem("def test_func(): pass")
-        l = [1]
+        values = [1]
         ss.prepare(item)
-        ss.addfinalizer(l.pop, colitem=item)
-        assert l
+        ss.addfinalizer(values.pop, colitem=item)
+        assert values
         ss._pop_and_teardown()
-        assert not l
+        assert not values
 
     def test_teardown_exact_stack_empty(self, testdir):
         item = testdir.getitem("def test_func(): pass")
@@ -32,7 +34,7 @@ class TestSetupState(object):
             def setup_module(mod):
                 raise ValueError(42)
             def test_func(): pass
-        """)  # noqa
+        """)
         ss = runner.SetupState()
         pytest.raises(ValueError, lambda: ss.prepare(item))
         pytest.raises(ValueError, lambda: ss.prepare(item))
@@ -392,10 +394,10 @@ reporttypes = [
 
 @pytest.mark.parametrize('reporttype', reporttypes, ids=[x.__name__ for x in reporttypes])
 def test_report_extra_parameters(reporttype):
-    if hasattr(py.std.inspect, 'signature'):
-        args = list(py.std.inspect.signature(reporttype.__init__).parameters.keys())[1:]
+    if hasattr(inspect, 'signature'):
+        args = list(inspect.signature(reporttype.__init__).parameters.keys())[1:]
     else:
-        args = py.std.inspect.getargspec(reporttype.__init__)[0][1:]
+        args = inspect.getargspec(reporttype.__init__)[0][1:]
     basekw = dict.fromkeys(args, [])
     report = reporttype(newthing=1, **basekw)
     assert report.newthing == 1
@@ -564,10 +566,10 @@ def test_importorskip(monkeypatch):
         importorskip("asdlkj")
 
     try:
-        sys = importorskip("sys")  # noqa
-        assert sys == py.std.sys
+        sysmod = importorskip("sys")
+        assert sysmod is sys
         # path = pytest.importorskip("os.path")
-        # assert path == py.std.os.path
+        # assert path == os.path
         excinfo = pytest.raises(pytest.skip.Exception, f)
         path = py.path.local(excinfo.getrepr().reprcrash.path)
         # check that importorskip reports the actual call
@@ -575,7 +577,7 @@ def test_importorskip(monkeypatch):
         assert path.purebasename == "test_runner"
         pytest.raises(SyntaxError, "pytest.importorskip('x y z')")
         pytest.raises(SyntaxError, "pytest.importorskip('x=y')")
-        mod = py.std.types.ModuleType("hello123")
+        mod = types.ModuleType("hello123")
         mod.__version__ = "1.3"
         monkeypatch.setitem(sys.modules, "hello123", mod)
         pytest.raises(pytest.skip.Exception, """
@@ -595,7 +597,7 @@ def test_importorskip_imports_last_module_part():
 
 def test_importorskip_dev_module(monkeypatch):
     try:
-        mod = py.std.types.ModuleType("mockmodule")
+        mod = types.ModuleType("mockmodule")
         mod.__version__ = '0.13.0.dev-43290'
         monkeypatch.setitem(sys.modules, 'mockmodule', mod)
         mod2 = pytest.importorskip('mockmodule', minversion='0.12.0')
@@ -637,12 +639,14 @@ def test_pytest_cmdline_main(testdir):
 
 def test_unicode_in_longrepr(testdir):
     testdir.makeconftest("""
-        import py
-        def pytest_runtest_makereport(__multicall__):
-            rep = __multicall__.execute()
+        # -*- coding: utf-8 -*-
+        import pytest
+        @pytest.hookimpl(hookwrapper=True)
+        def pytest_runtest_makereport():
+            outcome = yield
+            rep = outcome.get_result()
             if rep.when == "call":
-                rep.longrepr = py.builtin._totext("\\xc3\\xa4", "utf8")
-            return rep
+                rep.longrepr = u'ä'
     """)
     testdir.makepyfile("""
         def test_out():

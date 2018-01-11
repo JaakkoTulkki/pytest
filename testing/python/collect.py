@@ -4,7 +4,6 @@ import sys
 from textwrap import dedent
 
 import _pytest._code
-import py
 import pytest
 from _pytest.main import (
     Collector,
@@ -25,7 +24,7 @@ class TestModule(object):
         b = testdir.mkdir("b")
         p = a.ensure("test_whatever.py")
         p.pyimport()
-        del py.std.sys.modules['test_whatever']
+        del sys.modules['test_whatever']
         b.ensure("test_whatever.py")
         result = testdir.runpytest()
         result.stdout.fnmatch_lines([
@@ -164,17 +163,10 @@ class TestClass(object):
                     assert fix == 1
         """)
         result = testdir.runpytest()
-        if sys.version_info < (2, 7):
-            # in 2.6, the code to handle static methods doesn't work
-            result.stdout.fnmatch_lines([
-                "*collected 0 items*",
-                "*cannot collect static method*",
-            ])
-        else:
-            result.stdout.fnmatch_lines([
-                "*collected 2 items*",
-                "*2 passed in*",
-            ])
+        result.stdout.fnmatch_lines([
+            "*collected 2 items*",
+            "*2 passed in*",
+        ])
 
     def test_setup_teardown_class_as_classmethod(self, testdir):
         testdir.makepyfile(test_mod1="""
@@ -761,7 +753,7 @@ class TestSorting(object):
 
         assert fn1 == fn2
         assert fn1 != modcol
-        if py.std.sys.version_info < (3, 0):
+        if sys.version_info < (3, 0):
             assert cmp(fn1, fn2) == 0
         assert hash(fn1) == hash(fn2)
 
@@ -819,10 +811,12 @@ class TestConftestCustomization(object):
     def test_customized_pymakemodule_issue205_subdir(self, testdir):
         b = testdir.mkdir("a").mkdir("b")
         b.join("conftest.py").write(_pytest._code.Source("""
-            def pytest_pycollect_makemodule(__multicall__):
-                mod = __multicall__.execute()
+            import pytest
+            @pytest.hookimpl(hookwrapper=True)
+            def pytest_pycollect_makemodule():
+                outcome = yield
+                mod = outcome.get_result()
                 mod.obj.hello = "world"
-                return mod
         """))
         b.join("test_module.py").write(_pytest._code.Source("""
             def test_hello():
@@ -839,7 +833,7 @@ class TestConftestCustomization(object):
             def pytest_pycollect_makeitem():
                 outcome = yield
                 if outcome.excinfo is None:
-                    result = outcome.result
+                    result = outcome.get_result()
                     if result:
                         for func in result:
                             func._some123 = "world"
@@ -873,11 +867,11 @@ class TestConftestCustomization(object):
 
     def test_makeitem_non_underscore(self, testdir, monkeypatch):
         modcol = testdir.getmodulecol("def _hello(): pass")
-        l = []
+        values = []
         monkeypatch.setattr(pytest.Module, 'makeitem',
-                            lambda self, name, obj: l.append(name))
-        l = modcol.collect()
-        assert '_hello' not in l
+                            lambda self, name, obj: values.append(name))
+        values = modcol.collect()
+        assert '_hello' not in values
 
     def test_issue2369_collect_module_fileext(self, testdir):
         """Ensure we can collect files with weird file extensions as Python

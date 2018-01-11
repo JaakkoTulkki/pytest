@@ -63,15 +63,15 @@ and running this module will show you precisely the output
 of the failing function and hide the other one::
 
     $ pytest
-    ======= test session starts ========
+    =========================== test session starts ============================
     platform linux -- Python 3.x.y, pytest-3.x.y, py-1.x.y, pluggy-0.x.y
     rootdir: $REGENDOC_TMPDIR, inifile:
     collected 2 items
     
-    test_module.py .F
+    test_module.py .F                                                    [100%]
     
-    ======= FAILURES ========
-    _______ test_func2 ________
+    ================================= FAILURES =================================
+    ________________________________ test_func2 ________________________________
     
         def test_func2():
     >       assert False
@@ -80,26 +80,26 @@ of the failing function and hide the other one::
     test_module.py:9: AssertionError
     -------------------------- Captured stdout setup ---------------------------
     setting up <function test_func2 at 0xdeadbeef>
-    ======= 1 failed, 1 passed in 0.12 seconds ========
+    ==================== 1 failed, 1 passed in 0.12 seconds ====================
 
 Accessing captured output from a test function
 ---------------------------------------------------
 
-The ``capsys`` and ``capfd`` fixtures allow to access stdout/stderr
-output created during test execution.  Here is an example test function
-that performs some output related checks:
+The ``capsys``, ``capsysbinary``, ``capfd``, and ``capfdbinary`` fixtures
+allow access to stdout/stderr output created during test execution.  Here is
+an example test function that performs some output related checks:
 
 .. code-block:: python
 
     def test_myoutput(capsys): # or use "capfd" for fd-level
-        print ("hello")
+        print("hello")
         sys.stderr.write("world\n")
-        out, err = capsys.readouterr()
-        assert out == "hello\n"
-        assert err == "world\n"
-        print ("next")
-        out, err = capsys.readouterr()
-        assert out == "next\n"
+        captured = capsys.readouterr()
+        assert captured.out == "hello\n"
+        assert captured.err == "world\n"
+        print("next")
+        captured = capsys.readouterr()
+        assert captured.out == "next\n"
 
 The ``readouterr()`` call snapshots the output so far -
 and capturing will be continued.  After the test
@@ -110,10 +110,29 @@ output streams and also interacts well with pytest's
 own per-test capturing.
 
 If you want to capture on filedescriptor level you can use
-the ``capfd`` function argument which offers the exact
+the ``capfd`` fixture which offers the exact
 same interface but allows to also capture output from
 libraries or subprocesses that directly write to operating
 system level output streams (FD1 and FD2).
+
+.. versionadded:: 3.3
+
+The return value from ``readouterr`` changed to a ``namedtuple`` with two attributes, ``out`` and ``err``.
+
+.. versionadded:: 3.3
+
+If the code under test writes non-textual data, you can capture this using
+the ``capsysbinary`` fixture which instead returns ``bytes`` from
+the ``readouterr`` method.  The ``capfsysbinary`` fixture is currently only
+available in python 3.
+
+
+.. versionadded:: 3.3
+
+If the code under test writes non-textual data, you can capture this using
+the ``capfdbinary`` fixture which instead returns ``bytes`` from
+the ``readouterr`` method.  The ``capfdbinary`` fixture operates on the
+filedescriptor level.
 
 
 .. versionadded:: 3.0

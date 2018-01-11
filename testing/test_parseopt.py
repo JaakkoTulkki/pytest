@@ -1,4 +1,5 @@
 from __future__ import absolute_import, division, print_function
+import argparse
 import sys
 import os
 import py
@@ -189,7 +190,7 @@ class TestParser(object):
         assert option.no is False
 
     def test_drop_short_helper(self):
-        parser = py.std.argparse.ArgumentParser(formatter_class=parseopt.DropShorterLongHelpFormatter)
+        parser = argparse.ArgumentParser(formatter_class=parseopt.DropShorterLongHelpFormatter)
         parser.add_argument('-t', '--twoword', '--duo', '--two-word', '--two',
                             help='foo').map_long_option = {'two': 'two-word'}
         # throws error on --deux only!
@@ -300,13 +301,7 @@ def test_argcomplete(testdir, monkeypatch):
     elif not result.stdout.str():
         pytest.skip("bash provided no output, argcomplete not available?")
     else:
-        if py.std.sys.version_info < (2, 7):
-            result.stdout.lines = result.stdout.lines[0].split('\x0b')
-            result.stdout.fnmatch_lines(["--funcargs", "--fulltrace"])
-        else:
-            result.stdout.fnmatch_lines(["--funcargs", "--fulltrace"])
-    if py.std.sys.version_info < (2, 7):
-        return
+        result.stdout.fnmatch_lines(["--funcargs", "--fulltrace"])
     os.mkdir('test_argcomplete.d')
     arg = 'test_argc'
     monkeypatch.setenv('COMP_LINE', "pytest " + arg)

@@ -73,19 +73,19 @@ def test_setup(testdir):
 
 def test_setUpModule(testdir):
     testpath = testdir.makepyfile("""
-        l = []
+        values = []
 
         def setUpModule():
-            l.append(1)
+            values.append(1)
 
         def tearDownModule():
-            del l[0]
+            del values[0]
 
         def test_hello():
-            assert l == [1]
+            assert values == [1]
 
         def test_world():
-            assert l == [1]
+            assert values == [1]
         """)
     result = testdir.runpytest(testpath)
     result.stdout.fnmatch_lines([
@@ -95,13 +95,13 @@ def test_setUpModule(testdir):
 
 def test_setUpModule_failing_no_teardown(testdir):
     testpath = testdir.makepyfile("""
-        l = []
+        values = []
 
         def setUpModule():
             0/0
 
         def tearDownModule():
-            l.append(1)
+            values.append(1)
 
         def test_hello():
             pass
@@ -109,7 +109,7 @@ def test_setUpModule_failing_no_teardown(testdir):
     reprec = testdir.inline_run(testpath)
     reprec.assertoutcome(passed=0, failed=1)
     call = reprec.getcalls("pytest_runtest_setup")[0]
-    assert not call.item.module.l
+    assert not call.item.module.values
 
 
 def test_new_instances(testdir):
@@ -129,14 +129,14 @@ def test_teardown(testdir):
     testpath = testdir.makepyfile("""
         import unittest
         class MyTestCase(unittest.TestCase):
-            l = []
+            values = []
             def test_one(self):
                 pass
             def tearDown(self):
-                self.l.append(None)
+                self.values.append(None)
         class Second(unittest.TestCase):
             def test_check(self):
-                self.assertEqual(MyTestCase.l, [None])
+                self.assertEqual(MyTestCase.values, [None])
     """)
     reprec = testdir.inline_run(testpath)
     passed, skipped, failed = reprec.countoutcomes()
@@ -168,7 +168,6 @@ def test_teardown_issue1649(testdir):
         assert type(obj).__name__ != 'TestCaseObjectsShouldBeCleanedUp'
 
 
-@pytest.mark.skipif("sys.version_info < (2,7)")
 def test_unittest_skip_issue148(testdir):
     testpath = testdir.makepyfile("""
         import unittest
@@ -629,7 +628,6 @@ def test_unittest_typerror_traceback(testdir):
     assert result.ret == 1
 
 
-@pytest.mark.skipif("sys.version_info < (2,7)")
 @pytest.mark.parametrize('runner', ['pytest', 'unittest'])
 def test_unittest_expected_failure_for_failing_test_is_xfail(testdir, runner):
     script = testdir.makepyfile("""
@@ -656,7 +654,6 @@ def test_unittest_expected_failure_for_failing_test_is_xfail(testdir, runner):
     assert result.ret == 0
 
 
-@pytest.mark.skipif("sys.version_info < (2,7)")
 @pytest.mark.parametrize('runner', ['pytest', 'unittest'])
 def test_unittest_expected_failure_for_passing_test_is_fail(testdir, runner):
     script = testdir.makepyfile("""
@@ -770,8 +767,10 @@ def test_no_teardown_if_setupclass_failed(testdir):
 
 def test_issue333_result_clearing(testdir):
     testdir.makeconftest("""
-        def pytest_runtest_call(__multicall__, item):
-            __multicall__.execute()
+        import pytest
+        @pytest.hookimpl(hookwrapper=True)
+        def pytest_runtest_call(item):
+            yield
             assert 0
     """)
     testdir.makepyfile("""
@@ -785,7 +784,6 @@ def test_issue333_result_clearing(testdir):
     reprec.assertoutcome(failed=1)
 
 
-@pytest.mark.skipif("sys.version_info < (2,7)")
 def test_unittest_raise_skip_issue748(testdir):
     testdir.makepyfile(test_foo="""
         import unittest
@@ -801,7 +799,6 @@ def test_unittest_raise_skip_issue748(testdir):
     """)
 
 
-@pytest.mark.skipif("sys.version_info < (2,7)")
 def test_unittest_skip_issue1169(testdir):
     testdir.makepyfile(test_foo="""
         import unittest

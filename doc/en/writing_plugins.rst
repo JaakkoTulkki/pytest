@@ -57,9 +57,7 @@ Plugin discovery order at tool startup
 
 .. _`pytest/plugin`: http://bitbucket.org/pytest-dev/pytest/src/tip/pytest/plugin/
 .. _`conftest.py plugins`:
-.. _`conftest.py`:
 .. _`localplugin`:
-.. _`conftest`:
 .. _`local conftest plugins`:
 
 conftest.py: local per-directory plugins
@@ -186,16 +184,16 @@ statements and the detailed introspection of expressions upon
 assertion failures.  This is provided by "assertion rewriting" which
 modifies the parsed AST before it gets compiled to bytecode.  This is
 done via a :pep:`302` import hook which gets installed early on when
-``pytest`` starts up and will perform this re-writing when modules get
+``pytest`` starts up and will perform this rewriting when modules get
 imported.  However since we do not want to test different bytecode
-then you will run in production this hook only re-writes test modules
+then you will run in production this hook only rewrites test modules
 themselves as well as any modules which are part of plugins.  Any
-other imported module will not be re-written and normal assertion
+other imported module will not be rewritten and normal assertion
 behaviour will happen.
 
 If you have assertion helpers in other modules where you would need
 assertion rewriting to be enabled you need to ask ``pytest``
-explicitly to re-write this module before it gets imported.
+explicitly to rewrite this module before it gets imported.
 
 .. autofunction:: pytest.register_assert_rewrite
 
@@ -218,10 +216,10 @@ With the following typical ``setup.py`` extract:
       ...
    )
 
-In this case only ``pytest_foo/plugin.py`` will be re-written.  If the
+In this case only ``pytest_foo/plugin.py`` will be rewritten.  If the
 helper module also contains assert statements which need to be
-re-written it needs to be marked as such, before it gets imported.
-This is easiest by marking it for re-writing inside the
+rewritten it needs to be marked as such, before it gets imported.
+This is easiest by marking it for rewriting inside the
 ``__init__.py`` module, which will always be imported first when a
 module inside a package is imported.  This way ``plugin.py`` can still
 import ``helper.py`` normally.  The contents of
@@ -265,7 +263,7 @@ for assertion rewriting (see :func:`pytest.register_assert_rewrite`).
 However for this to have any effect the module must not be
 imported already; if it was already imported at the time the
 ``pytest_plugins`` statement is processed, a warning will result and
-assertions inside the plugin will not be re-written.  To fix this you
+assertions inside the plugin will not be rewritten.  To fix this you
 can either call :func:`pytest.register_assert_rewrite` yourself before
 the module is imported, or you can arrange the code to delay the
 importing until after the plugin is registered.
@@ -454,7 +452,7 @@ hook wrappers and passes the same arguments as to the regular hooks.
 
 At the yield point of the hook wrapper pytest will execute the next hook
 implementations and return their result to the yield point in the form of
-a :py:class:`CallOutcome <_pytest.vendored_packages.pluggy._CallOutcome>` instance which encapsulates a result or
+a :py:class:`Result <pluggy._Result>` instance which encapsulates a result or
 exception info.  The yield point itself will thus typically not raise
 exceptions (unless there are bugs).
 
@@ -519,7 +517,7 @@ Here is the order of execution:
    Plugin1).
 
 4. Plugin3's pytest_collection_modifyitems then executing the code after the yield
-   point.  The yield receives a :py:class:`CallOutcome <_pytest.vendored_packages.pluggy._CallOutcome>` instance which encapsulates
+   point.  The yield receives a :py:class:`Result <pluggy._Result>` instance which encapsulates
    the result from calling the non-wrappers.  Wrappers shall not modify the result.
 
 It's possible to use ``tryfirst`` and ``trylast`` also in conjunction with
@@ -585,11 +583,22 @@ pytest hook reference
 Initialization, command line and configuration hooks
 ----------------------------------------------------
 
+Bootstrapping hooks
+~~~~~~~~~~~~~~~~~~~
+
+Bootstrapping hooks called for plugins registered early enough (internal and setuptools plugins).
+
 .. autofunction:: pytest_load_initial_conftests
 .. autofunction:: pytest_cmdline_preparse
 .. autofunction:: pytest_cmdline_parse
-.. autofunction:: pytest_addoption
 .. autofunction:: pytest_cmdline_main
+
+Initialization hooks
+~~~~~~~~~~~~~~~~~~~~
+
+Initialization hooks called for plugins and ``conftest.py`` files.
+
+.. autofunction:: pytest_addoption
 .. autofunction:: pytest_configure
 .. autofunction:: pytest_unconfigure
 
@@ -598,6 +607,7 @@ Generic "runtest" hooks
 
 All runtest related hooks receive a :py:class:`pytest.Item <_pytest.main.Item>` object.
 
+.. autofunction:: pytest_runtestloop
 .. autofunction:: pytest_runtest_protocol
 .. autofunction:: pytest_runtest_setup
 .. autofunction:: pytest_runtest_call
@@ -618,6 +628,7 @@ Collection hooks
 
 ``pytest`` calls the following hooks for collecting files and directories:
 
+.. autofunction:: pytest_collection
 .. autofunction:: pytest_ignore_collect
 .. autofunction:: pytest_collect_directory
 .. autofunction:: pytest_collect_file
@@ -689,6 +700,14 @@ Reference of objects involved in hooks
     :members:
     :show-inheritance:
 
+.. autoclass:: _pytest.main.FSCollector()
+    :members:
+    :show-inheritance:
+
+.. autoclass:: _pytest.main.Session()
+    :members:
+    :show-inheritance:
+
 .. autoclass:: _pytest.main.Item()
     :members:
     :show-inheritance:
@@ -716,7 +735,7 @@ Reference of objects involved in hooks
     :members:
     :inherited-members:
 
-.. autoclass:: _pytest.vendored_packages.pluggy._CallOutcome()
+.. autoclass:: pluggy._Result
     :members:
 
 .. autofunction:: _pytest.config.get_plugin_manager()
@@ -726,7 +745,7 @@ Reference of objects involved in hooks
     :undoc-members:
     :show-inheritance:
 
-.. autoclass:: _pytest.vendored_packages.pluggy.PluginManager()
+.. autoclass:: pluggy.PluginManager()
     :members:
 
 .. currentmodule:: _pytest.pytester

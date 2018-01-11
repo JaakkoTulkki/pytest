@@ -161,12 +161,46 @@ def test_markers_option(testdir):
         markers =
             a1: this is a webtest marker
             a1some: another marker
+            nodescription
     """)
     result = testdir.runpytest("--markers", )
     result.stdout.fnmatch_lines([
         "*a1*this is a webtest*",
         "*a1some*another marker",
+        "*nodescription*",
     ])
+
+
+def test_ini_markers_whitespace(testdir):
+    testdir.makeini("""
+        [pytest]
+        markers =
+            a1 : this is a whitespace marker
+    """)
+    testdir.makepyfile("""
+        import pytest
+
+        @pytest.mark.a1
+        def test_markers():
+            assert True
+    """)
+    rec = testdir.inline_run("--strict", "-m", "a1")
+    rec.assertoutcome(passed=1)
+
+
+def test_marker_without_description(testdir):
+    testdir.makefile(".cfg", setup="""
+        [tool:pytest]
+        markers=slow
+    """)
+    testdir.makeconftest("""
+        import pytest
+        pytest.mark.xfail('FAIL')
+    """)
+    ftdir = testdir.mkdir("ft1_dummy")
+    testdir.tmpdir.join("conftest.py").move(ftdir.join("conftest.py"))
+    rec = testdir.runpytest_subprocess("--strict")
+    rec.assert_outcomes()
 
 
 def test_markers_option_with_plugin_in_current_dir(testdir):
@@ -342,6 +376,24 @@ def test_parametrized_collect_with_wrong_args(testdir):
     ])
 
 
+def test_parametrized_with_kwargs(testdir):
+    """Test collect parametrized func with wrong number of args."""
+    py_file = testdir.makepyfile("""
+        import pytest
+
+        @pytest.fixture(params=[1,2])
+        def a(request):
+            return request.param
+
+        @pytest.mark.parametrize(argnames='b', argvalues=[1, 2])
+        def test_func(a, b):
+            pass
+    """)
+
+    result = testdir.runpytest(py_file)
+    assert(result.ret == 0)
+
+
 class TestFunctional(object):
 
     def test_mark_per_function(self, testdir):
@@ -433,11 +485,11 @@ class TestFunctional(object):
         assert marker.kwargs == {'x': 1, 'y': 2, 'z': 4}
 
         # test the new __iter__ interface
-        l = list(marker)
-        assert len(l) == 3
-        assert l[0].args == ("pos0",)
-        assert l[1].args == ()
-        assert l[2].args == ("pos1", )
+        values = list(marker)
+        assert len(values) == 3
+        assert values[0].args == ("pos0",)
+        assert values[1].args == ()
+        assert values[2].args == ("pos1", )
 
     @pytest.mark.xfail(reason='unfixed')
     def test_merging_markers_deep(self, testdir):
@@ -529,9 +581,9 @@ class TestFunctional(object):
                 def test_func():
                     pass
         """)
-        l = reprec.getfailedcollections()
-        assert len(l) == 1
-        assert "TypeError" in str(l[0].longrepr)
+        values = reprec.getfailedcollections()
+        assert len(values) == 1
+        assert "TypeError" in str(values[0].longrepr)
 
     def test_mark_dynamically_in_funcarg(self, testdir):
         testdir.makeconftest("""
@@ -540,8 +592,8 @@ class TestFunctional(object):
             def arg(request):
                 request.applymarker(pytest.mark.hello)
             def pytest_terminal_summary(terminalreporter):
-                l = terminalreporter.stats['passed']
-                terminalreporter.writer.line("keyword: %s" % l[0].keywords)
+                values = terminalreporter.stats['passed']
+                terminalreporter._tw.line("keyword: %s" % values[0].keywords)
         """)
         testdir.makepyfile("""
             def test_func(arg):
@@ -564,10 +616,10 @@ class TestFunctional(object):
         item, = items
         keywords = item.keywords
         marker = keywords['hello']
-        l = list(marker)
-        assert len(l) == 2
-        assert l[0].args == ("pos0",)
-        assert l[1].args == ("pos1",)
+        values = list(marker)
+        assert len(values) == 2
+        assert values[0].args == ("pos0",)
+        assert values[1].args == ("pos1",)
 
     def test_no_marker_match_on_unmarked_names(self, testdir):
         p = testdir.makepyfile("""

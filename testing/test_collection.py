@@ -1,7 +1,9 @@
 from __future__ import absolute_import, division, print_function
+import pprint
+import sys
 import pytest
-import py
 
+import _pytest._code
 from _pytest.main import Session, EXIT_NOTESTSCOLLECTED, _in_venv
 
 
@@ -35,7 +37,7 @@ class TestCollector(object):
 
         assert fn1 == fn2
         assert fn1 != modcol
-        if py.std.sys.version_info < (3, 0):
+        if sys.version_info < (3, 0):
             assert cmp(fn1, fn2) == 0
         assert hash(fn1) == hash(fn2)
 
@@ -127,7 +129,7 @@ class TestCollectFS(object):
                              ("activate", "activate.csh", "activate.fish",
                               "Activate", "Activate.bat", "Activate.ps1"))
     def test_ignored_virtualenvs(self, testdir, fname):
-        bindir = "Scripts" if py.std.sys.platform.startswith("win") else "bin"
+        bindir = "Scripts" if sys.platform.startswith("win") else "bin"
         testdir.tmpdir.ensure("virtual", bindir, fname)
         testfile = testdir.tmpdir.ensure("virtual", "test_invenv.py")
         testfile.write("def test_hello(): pass")
@@ -146,7 +148,7 @@ class TestCollectFS(object):
                              ("activate", "activate.csh", "activate.fish",
                               "Activate", "Activate.bat", "Activate.ps1"))
     def test_ignored_virtualenvs_norecursedirs_precedence(self, testdir, fname):
-        bindir = "Scripts" if py.std.sys.platform.startswith("win") else "bin"
+        bindir = "Scripts" if sys.platform.startswith("win") else "bin"
         # norecursedirs takes priority
         testdir.tmpdir.ensure(".virtual", bindir, fname)
         testfile = testdir.tmpdir.ensure(".virtual", "test_invenv.py")
@@ -162,7 +164,7 @@ class TestCollectFS(object):
                               "Activate", "Activate.bat", "Activate.ps1"))
     def test__in_venv(self, testdir, fname):
         """Directly test the virtual env detection function"""
-        bindir = "Scripts" if py.std.sys.platform.startswith("win") else "bin"
+        bindir = "Scripts" if sys.platform.startswith("win") else "bin"
         # no bin/activate, not a virtualenv
         base_path = testdir.tmpdir.mkdir('venv')
         assert _in_venv(base_path) is False
@@ -276,10 +278,12 @@ class TestPrunetraceback(object):
         """)
         testdir.makeconftest("""
             import pytest
-            def pytest_make_collect_report(__multicall__):
-                rep = __multicall__.execute()
+            @pytest.hookimpl(hookwrapper=True)
+            def pytest_make_collect_report():
+                outcome = yield
+                rep = outcome.get_result()
                 rep.headerlines += ["header1"]
-                return rep
+                outcome.force_result(rep)
         """)
         result = testdir.runpytest(p)
         result.stdout.fnmatch_lines([
@@ -433,7 +437,7 @@ class TestSession(object):
         assert item.name == "test_func"
         newid = item.nodeid
         assert newid == id
-        py.std.pprint.pprint(hookrec.calls)
+        pprint.pprint(hookrec.calls)
         topdir = testdir.tmpdir  # noqa
         hookrec.assert_contains([
             ("pytest_collectstart", "collector.fspath == topdir"),
@@ -483,7 +487,7 @@ class TestSession(object):
         id = p.basename
 
         items, hookrec = testdir.inline_genitems(id)
-        py.std.pprint.pprint(hookrec.calls)
+        pprint.pprint(hookrec.calls)
         assert len(items) == 2
         hookrec.assert_contains([
             ("pytest_collectstart",
@@ -505,7 +509,7 @@ class TestSession(object):
 
         items, hookrec = testdir.inline_genitems()
         assert len(items) == 1
-        py.std.pprint.pprint(hookrec.calls)
+        pprint.pprint(hookrec.calls)
         hookrec.assert_contains([
             ("pytest_collectstart", "collector.fspath == test_aaa"),
             ("pytest_pycollect_makeitem", "name == 'test_func'"),
@@ -526,7 +530,7 @@ class TestSession(object):
 
         items, hookrec = testdir.inline_genitems(id)
         assert len(items) == 2
-        py.std.pprint.pprint(hookrec.calls)
+        pprint.pprint(hookrec.calls)
         hookrec.assert_contains([
             ("pytest_collectstart", "collector.fspath == test_aaa"),
             ("pytest_pycollect_makeitem", "name == 'test_func'"),
@@ -569,7 +573,6 @@ class Test_getinitialnodes(object):
         col = testdir.getnode(config, x)
         assert isinstance(col, pytest.Module)
         assert col.name == 'x.py'
-        assert col.parent.name == testdir.tmpdir.basename
         assert col.parent.parent is None
         for col in col.listchain():
             assert col.config is config
@@ -702,9 +705,9 @@ class TestNodekeywords(object):
             def test_pass(): pass
             def test_fail(): assert 0
         """)
-        l = list(modcol.keywords)
-        assert modcol.name in l
-        for x in l:
+        values = list(modcol.keywords)
+        assert modcol.name in values
+        for x in values:
             assert not x.startswith("_")
         assert modcol.name in repr(modcol.keywords)
 
@@ -766,12 +769,11 @@ def test_exit_on_collection_with_maxfail_smaller_than_n_errors(testdir):
     testdir.makepyfile(**COLLECTION_ERROR_PY_FILES)
 
     res = testdir.runpytest("--maxfail=1")
-    assert res.ret == 2
+    assert res.ret == 1
 
     res.stdout.fnmatch_lines([
         "*ERROR collecting test_02_import_error.py*",
         "*No module named *asdfa*",
-        "*Interrupted: stopping after 1 failures*",
     ])
 
     assert 'test_03' not in res.stdout.str()
@@ -823,10 +825,34 @@ def test_continue_on_collection_errors_maxfail(testdir):
     testdir.makepyfile(**COLLECTION_ERROR_PY_FILES)
 
     res = testdir.runpytest("--continue-on-collection-errors", "--maxfail=3")
-    assert res.ret == 2
+    assert res.ret == 1
 
     res.stdout.fnmatch_lines([
         "collected 2 items / 2 errors",
-        "*Interrupted: stopping after 3 failures*",
         "*1 failed, 2 error*",
+    ])
+
+
+def test_fixture_scope_sibling_conftests(testdir):
+    """Regression test case for https://github.com/pytest-dev/pytest/issues/2836"""
+    foo_path = testdir.mkpydir("foo")
+    foo_path.join("conftest.py").write(_pytest._code.Source("""
+        import pytest
+        @pytest.fixture
+        def fix():
+            return 1
+    """))
+    foo_path.join("test_foo.py").write("def test_foo(fix): assert fix == 1")
+
+    # Tests in `food/` should not see the conftest fixture from `foo/`
+    food_path = testdir.mkpydir("food")
+    food_path.join("test_food.py").write("def test_food(fix): assert fix == 1")
+
+    res = testdir.runpytest()
+    assert res.ret == 1
+
+    res.stdout.fnmatch_lines([
+        "*ERROR at setup of test_food*",
+        "E*fixture 'fix' not found",
+        "*1 passed, 1 error*",
     ])

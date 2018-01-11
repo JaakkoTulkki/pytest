@@ -27,9 +27,6 @@ Here is a little annotated list for some popular plugins:
   for `twisted <http://twistedmatrix.com>`_ apps, starting a reactor and
   processing deferreds from test functions.
 
-* `pytest-catchlog <http://pypi.python.org/pypi/pytest-catchlog>`_:
-  to capture and assert about messages from the logging module
-
 * `pytest-cov <http://pypi.python.org/pypi/pytest-cov>`_:
   coverage reporting, compatible with distributed testing
 
@@ -94,7 +91,7 @@ environment you can type::
 
 and will get an extended test header which shows activated plugins
 and their names. It will also print local plugins aka
-:ref:`conftest.py <conftest>` files when they are loaded.
+:ref:`conftest.py <conftest.py plugins>` files when they are loaded.
 
 .. _`cmdunregister`:
 
@@ -155,4 +152,3 @@ in the `pytest repository <https://github.com/pytest-dev/pytest>`_.
     _pytest.terminal
     _pytest.tmpdir
     _pytest.unittest
-
