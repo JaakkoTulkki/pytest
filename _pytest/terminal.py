@@ -382,6 +382,9 @@ class TerminalReporter:
             msg += "[pypy-%s-%s]" % (verinfo, sys.pypy_version_info[3])
         msg += ", pytest-%s, py-%s, pluggy-%s" % (
                pytest.__version__, py.__version__, pluggy.__version__)
+        # the getattr(self.config.option, 'pastebin', None) means that the
+        # module is aware of the pastebin plugin.
+        # we are testing is here whether verbose or not
         if self.verbosity > 0 or self.config.option.debug or \
            getattr(self.config.option, 'pastebin', None):
             msg += " -- " + str(sys.executable)
