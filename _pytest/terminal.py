@@ -425,9 +425,13 @@ class TerminalReporter:
         self._write_report_lines_from_hooks(lines)
 
     def _printcollecteditems(self, items):
+        # todo refactor this
         # to print out items and their parent collectors
         # we take care to leave out Instances aka ()
         # because later versions are going to get rid of them anyway
+
+        # magic number
+        # one if too many
         if self.config.option.verbose < 0:
             if self.config.option.verbose < -1:
                 counts = {}
@@ -663,6 +667,7 @@ def build_summary_stats_line(stats):
     keys = ("failed passed skipped deselected "
             "xfailed xpassed warnings error").split()
     unknown_key_seen = False
+    # this could be [k for k in stats.keys() if k]
     for key in stats.keys():
         if key not in keys:
             if key:  # setup/teardown reports have an empty key, ignore them
