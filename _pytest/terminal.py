@@ -251,11 +251,10 @@ class TerminalReporter:
 
     def pytest_plugin_registered(self, plugin):
         if self.config.option.traceconfig:
-            msg = "PLUGIN registered: %s" % (plugin,)
             # XXX this event may happen during setup/teardown time
             #     which unfortunately captures our output here
             #     which garbles our output if we use self.write_line
-            self.write_line(msg)
+            self.write_line(self.language.get_plugin_registered(plugin))
 
     def pytest_deselected(self, items):
         self.stats.setdefault('deselected', []).extend(items)
@@ -515,7 +514,7 @@ class TerminalReporter:
             if self.config.option.fulltrace:
                 excrepr.toterminal(self._tw)
             else:
-                self._write_line("to show a full traceback on KeyboardInterrupt use --fulltrace", yellow=True)
+                self._write_line(self.language.get_show_traceback_instructions(), yellow=True)
                 excrepr.reprcrash.toterminal(self._tw)
 
     def _locationline(self, nodeid, fspath, lineno, domain):
