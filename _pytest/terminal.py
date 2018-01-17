@@ -17,6 +17,7 @@ import pytest
 from _pytest import nodes
 from _pytest.main import EXIT_OK, EXIT_TESTSFAILED, EXIT_INTERRUPTED, \
     EXIT_USAGEERROR, EXIT_NOTESTSCOLLECTED
+from _pytest.terminal_language.english import English
 
 
 def pytest_addoption(parser):
@@ -130,8 +131,9 @@ class WarningReport:
 
 
 class TerminalReporter:
-    def __init__(self, config, file=None):
+    def __init__(self, config, file=None, language=English):
         import _pytest.config
+        self.language = language()
         self.config = config
         self.verbosity = self.config.option.verbose
         self.showheader = self.verbosity >= 0
@@ -155,6 +157,17 @@ class TerminalReporter:
         self._progress_items_reported = 0
         self._show_progress_info = self.config.getini('console_output_style') == 'progress'
 
+    def _write(self, *args, **kwargs):
+        """
+        replaced self._tw.write() with self._write()
+        => code in this class should not really care about the api of the terminal writer.
+        
+        :param args: 
+        :param kwargs: 
+        :return: 
+        """
+        self._tw.write(*args, **kwargs)
+
     def hasopt(self, char):
         char = {'xfailed': 'x', 'skipped': 's'}.get(char, char)
         return char in self.reportchars
@@ -166,33 +179,36 @@ class TerminalReporter:
                 self._write_progress_information_filling_space()
             self.currentfspath = fspath
             fspath = self.startdir.bestrelpath(fspath)
-            self._tw.line()
-            self._tw.write(fspath + " ")
-        self._tw.write(res)
+            self._write_line()
+            self._write(fspath + " ")
+        self._write(res)
+
+    def _write_line(self, *args, **kwargs):
+        self._tw.line(*args, **kwargs)
 
     def write_ensure_prefix(self, prefix, extra="", **kwargs):
         if self.currentfspath != prefix:
-            self._tw.line()
+            self._write_line()
             self.currentfspath = prefix
-            self._tw.write(prefix)
+            self._write(prefix)
         if extra:
-            self._tw.write(extra, **kwargs)
+            self._write(extra, **kwargs)
             self.currentfspath = -2
             self._write_progress_information_filling_space()
 
     def ensure_newline(self):
         if self.currentfspath:
-            self._tw.line()
+            self._write_line()
             self.currentfspath = None
 
     def write(self, content, **markup):
-        self._tw.write(content, **markup)
+        self._write(content, **markup)
 
     def write_line(self, line, **markup):
         if not isinstance(line, six.text_type):
             line = six.text_type(line, errors="replace")
         self.ensure_newline()
-        self._tw.line(line, **markup)
+        self._write_line(line, **markup)
 
     def rewrite(self, line, **markup):
         """
@@ -210,7 +226,7 @@ class TerminalReporter:
         else:
             fill = ''
         line = str(line)
-        self._tw.write("\r" + line + fill, **markup)
+        self._write("\r" + line + fill, **markup)
 
     def write_sep(self, sep, title=None, **markup):
         self.ensure_newline()
@@ -220,11 +236,11 @@ class TerminalReporter:
         self._tw.sep(sep, title, **kw)
 
     def line(self, msg, **kw):
-        self._tw.line(msg, **kw)
+        self._write_line(msg, **kw)
 
     def pytest_internalerror(self, excrepr):
         for line in six.text_type(excrepr).split("\n"):
-            self.write_line("INTERNALERROR> " + line)
+            self.write_line("%s %s" % (self.language.get_internal_error(), line))
         return 1
 
     def pytest_logwarning(self, code, fslocation, message, nodeid):
@@ -273,7 +289,7 @@ class TerminalReporter:
             if not running_xdist and self.showfspath:
                 self.write_fspath_result(rep.nodeid, letter)
             else:
-                self._tw.write(letter)
+                self._write(letter)
             self._write_progress_if_past_edge()
         else:
             if markup is None:
@@ -290,13 +306,13 @@ class TerminalReporter:
                 self.write_ensure_prefix(line, word, **markup)
             else:
                 self.ensure_newline()
-                self._tw.write("[%s]" % rep.node.gateway.id)
+                self._write("[%s]" % rep.node.gateway.id)
                 if self._show_progress_info:
-                    self._tw.write(self._get_progress_information_message() + " ", cyan=True)
+                    self._write(self._get_progress_information_message() + " ", cyan=True)
                 else:
-                    self._tw.write(' ')
-                self._tw.write(word, **markup)
-                self._tw.write(" " + line)
+                    self._write(' ')
+                self._write(word, **markup)
+                self._write(" " + line)
                 self.currentfspath = -2
 
     def _write_progress_if_past_edge(self):
@@ -310,7 +326,7 @@ class TerminalReporter:
         past_edge = self._tw.chars_on_current_line + self._PROGRESS_LENGTH + 1 >= self._screen_width
         if past_edge:
             msg = self._get_progress_information_message()
-            self._tw.write(msg + '\n', cyan=True)
+            self._write(msg + '\n', cyan=True)
 
     _PROGRESS_LENGTH = len(' [100%]')
 
@@ -431,7 +447,7 @@ class TerminalReporter:
         # because later versions are going to get rid of them anyway
 
         # magic number
-        # one if too many
+        # one if too many statements
         if self.config.option.verbose < 0:
             if self.config.option.verbose < -1:
                 counts = {}
@@ -439,15 +455,16 @@ class TerminalReporter:
                     name = item.nodeid.split('::', 1)[0]
                     counts[name] = counts.get(name, 0) + 1
                 for name, count in sorted(counts.items()):
-                    self._tw.line("%s: %d" % (name, count))
+                    self._write_line("%s: %d" % (name, count))
             else:
                 for item in items:
                     nodeid = item.nodeid
                     nodeid = nodeid.replace("::()::", "::")
-                    self._tw.line(nodeid)
+                    self._write_line(nodeid)
             return
         stack = []
-        indent = ""
+        # remove this unneccesary variable
+        # indent = ""
         for item in items:
             needed_collectors = item.listchain()[1:]  # strip root node
             while stack:
@@ -456,16 +473,17 @@ class TerminalReporter:
                 stack.pop()
             for col in needed_collectors[len(stack):]:
                 stack.append(col)
+                # todo remove this dead code
                 # if col.name == "()":
                 #    continue
                 indent = (len(stack) - 1) * "  "
-                self._tw.line("%s%s" % (indent, col))
+                self._write_line("%s%s" % (indent, col))
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_sessionfinish(self, exitstatus):
         outcome = yield
         outcome.get_result()
-        self._tw.line("")
+        self._write_line("")
         summary_exit_codes = (
             EXIT_OK, EXIT_TESTSFAILED, EXIT_INTERRUPTED, EXIT_USAGEERROR,
             EXIT_NOTESTSCOLLECTED)
@@ -497,7 +515,7 @@ class TerminalReporter:
             if self.config.option.fulltrace:
                 excrepr.toterminal(self._tw)
             else:
-                self._tw.line("to show a full traceback on KeyboardInterrupt use --fulltrace", yellow=True)
+                self._write_line("to show a full traceback on KeyboardInterrupt use --fulltrace", yellow=True)
                 excrepr.reprcrash.toterminal(self._tw)
 
     def _locationline(self, nodeid, fspath, lineno, domain):
@@ -555,13 +573,13 @@ class TerminalReporter:
 
             self.write_sep("=", "warnings summary", yellow=True, bold=False)
             for location, warning_records in grouped:
-                self._tw.line(str(location) or '<undetermined location>')
+                self._write_line(str(location) or '<undetermined location>')
                 for w in warning_records:
                     lines = w.message.splitlines()
                     indented = '\n'.join('  ' + x for x in lines)
-                    self._tw.line(indented)
-                self._tw.line()
-            self._tw.line('-- Docs: http://doc.pytest.org/en/latest/warnings.html')
+                    self._write_line(indented)
+                self._write_line()
+            self._write_line('-- Docs: http://doc.pytest.org/en/latest/warnings.html')
 
     def summary_passes(self):
         if self.config.option.tbstyle != "no":
@@ -581,7 +599,7 @@ class TerminalReporter:
                 self._tw.sep('-', secname)
                 if content[-1:] == "\n":
                     content = content[:-1]
-                self._tw.line(content)
+                self._write_line(content)
 
     def summary_failures(self):
         if self.config.option.tbstyle != "no":
@@ -626,7 +644,7 @@ class TerminalReporter:
             self._tw.sep("-", secname)
             if content[-1:] == "\n":
                 content = content[:-1]
-            self._tw.line(content)
+            self._write_line(content)
 
     def summary_stats(self):
         session_duration = time.time() - self._sessionstarttime
