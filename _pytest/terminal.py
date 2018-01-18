@@ -389,9 +389,10 @@ class TerminalReporter:
         self._sessionstarttime = time.time()
         if not self.showheader:
             return
-        self.write_sep("=", "test session starts", bold=True)
+        self.write_sep("=", self.language.get_session_starts(), bold=True)
         verinfo = platform.python_version()
-        msg = "platform %s -- Python %s" % (sys.platform, verinfo)
+        msg = "%s %s -- Python %s" % (self.language.get_platform(),
+                                      sys.platform, verinfo)
         if hasattr(sys, 'pypy_version_info'):
             verinfo = ".".join(map(str, sys.pypy_version_info[:3]))
             msg += "[pypy-%s-%s]" % (verinfo, sys.pypy_version_info[3])
@@ -430,7 +431,7 @@ class TerminalReporter:
         if self.config.option.collectonly:
             self._printcollecteditems(session.items)
             if self.stats.get('failed'):
-                self._tw.sep("!", "collection failures")
+                self._tw.sep("!", self.language.get_colletion_failures())
                 for rep in self.stats.get('failed'):
                     rep.toterminal(self._tw)
                 return 1
@@ -541,7 +542,7 @@ class TerminalReporter:
             fspath, lineno, domain = rep.location
             return domain
         else:
-            return "test session"  # XXX?
+            return self.language.get_test_session()  # XXX?
 
     def _getcrashline(self, rep):
         try:
@@ -570,9 +571,9 @@ class TerminalReporter:
 
             grouped = itertools.groupby(all_warnings, key=lambda wr: wr.get_location(self.config))
 
-            self.write_sep("=", "warnings summary", yellow=True, bold=False)
+            self.write_sep("=", self.language.get_warnings_summary(), yellow=True, bold=False)
             for location, warning_records in grouped:
-                self._write_line(str(location) or '<undetermined location>')
+                self._write_line(str(location) or '<%s>' % self.language.get_undetermined_location())
                 for w in warning_records:
                     lines = w.message.splitlines()
                     indented = '\n'.join('  ' + x for x in lines)
@@ -586,7 +587,7 @@ class TerminalReporter:
                 reports = self.getreports('passed')
                 if not reports:
                     return
-                self.write_sep("=", "PASSES")
+                self.write_sep("=", self.language.get_passes())
                 for rep in reports:
                     msg = self._getfailureheadline(rep)
                     self.write_sep("_", msg)
@@ -605,7 +606,7 @@ class TerminalReporter:
             reports = self.getreports('failed')
             if not reports:
                 return
-            self.write_sep("=", "FAILURES")
+            self.write_sep("=", self.language.get_failures())
             for rep in reports:
                 if self.config.option.tbstyle == "line":
                     line = self._getcrashline(rep)
@@ -624,16 +625,16 @@ class TerminalReporter:
             reports = self.getreports('error')
             if not reports:
                 return
-            self.write_sep("=", "ERRORS")
+            self.write_sep("=", self.language.get_errors())
             for rep in self.stats['error']:
                 msg = self._getfailureheadline(rep)
                 if not hasattr(rep, 'when'):
                     # collect
-                    msg = "ERROR collecting " + msg
+                    msg = self.language.get_errors_collecting() + msg
                 elif rep.when == "setup":
-                    msg = "ERROR at setup of " + msg
+                    msg = self.language.get_errors_setup() + msg
                 elif rep.when == "teardown":
-                    msg = "ERROR at teardown of " + msg
+                    msg = self.language.get_errors_teardown() + msg
                 self.write_sep("_", msg)
                 self._outrep_summary(rep)
 
@@ -648,7 +649,7 @@ class TerminalReporter:
     def summary_stats(self):
         session_duration = time.time() - self._sessionstarttime
         (line, color) = build_summary_stats_line(self.stats)
-        msg = "%s in %.2f seconds" % (line, session_duration)
+        msg = "%s in %.2f %s" % (line, session_duration, self.language.get_seconds())
         markup = {color: True, 'bold': True}
 
         if self.verbosity >= 0:
@@ -658,8 +659,10 @@ class TerminalReporter:
 
     def summary_deselected(self):
         if 'deselected' in self.stats:
-            self.write_sep("=", "%d tests deselected" % (
-                len(self.stats['deselected'])), bold=True)
+            self.write_sep("=", "%d %s" % (
+                len(self.stats['deselected']),
+                self.language.get_tests_deselected()
+            ), bold=True)
 
 
 def repr_pythonversion(v=None):
