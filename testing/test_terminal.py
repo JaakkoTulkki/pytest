@@ -4,13 +4,15 @@ terminal reporting of the full testing process.
 from __future__ import absolute_import, division, print_function
 import collections
 import sys
+from unittest import mock
+from unittest.mock import patch
 
 import pluggy
 import _pytest._code
 import py
 import pytest
 from _pytest.main import EXIT_NOTESTSCOLLECTED
-from _pytest.terminal import TerminalReporter, repr_pythonversion, getreportopt
+from _pytest.terminal import TerminalReporter, repr_pythonversion, getreportopt, getcrashline
 from _pytest.terminal import build_summary_stats_line, _plugin_nameversions
 
 
@@ -632,6 +634,8 @@ def test_color_no(testdir):
     assert 'test session starts' in result.stdout.str()
     assert '\x1b[1m' not in result.stdout.str()
 
+def chicken():
+    raise AttributeError
 
 @pytest.mark.parametrize('verbose', [True, False])
 def test_color_yes_collection_on_non_atty(testdir, verbose):
@@ -822,6 +826,18 @@ def pytest_report_header(config, startdir):
             "line1",
             str(testdir.tmpdir),
         ])
+
+    def test_getcrashline(self):
+        class A:
+            def __str__(self):
+                raise AttributeError
+
+        report = mock.Mock()
+        report.longrepr = A()
+        report.longrepr.reprcrash = A()
+        crashline = getcrashline(report)
+        assert '' == crashline
+
 
 
 @pytest.mark.xfail("not hasattr(os, 'dup')")

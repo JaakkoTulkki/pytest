@@ -83,6 +83,20 @@ def getreportopt(config):
     return reportopts
 
 
+def getcrashline(rep):
+    """
+    this was moved here. Self not used. Second, want to make this more testable
+    :param rep: _pytest.runner.TestReport
+    :return: crashline
+    """
+    try:
+        return str(rep.longrepr.reprcrash)
+    except AttributeError:
+        try:
+            return str(rep.longrepr)[:50]
+        except AttributeError:
+            return ""
+
 def pytest_report_teststatus(report):
     if report.passed:
         letter = "."
@@ -546,14 +560,6 @@ class TerminalReporter:
         else:
             return self.language.get_test_session()  # XXX?
 
-    def _getcrashline(self, rep):
-        try:
-            return str(rep.longrepr.reprcrash)
-        except AttributeError:
-            try:
-                return str(rep.longrepr)[:50]
-            except AttributeError:
-                return ""
 
     #
     # summaries for sessionfinish
@@ -611,7 +617,7 @@ class TerminalReporter:
             self.write_sep("=", self.language.get_failures())
             for rep in reports:
                 if self.config.option.tbstyle == "line":
-                    line = self._getcrashline(rep)
+                    line = getcrashline(rep)
                     self.write_line(line)
                 else:
                     msg = self._getfailureheadline(rep)
