@@ -240,7 +240,7 @@ class TerminalReporter:
 
     def pytest_internalerror(self, excrepr):
         for line in six.text_type(excrepr).split("\n"):
-            self.write_line("%s %s" % (self.language.get_internal_error(), line))
+            self.write_line("%s> %s" % (self.language.get_internal_error(), line))
         return 1
 
     def pytest_logwarning(self, code, fslocation, message, nodeid):
@@ -349,9 +349,9 @@ class TerminalReporter:
 
     def pytest_collectreport(self, report):
         if report.failed:
-            self.stats.setdefault("error", []).append(report)
+            self.stats.setdefault(self.language.get_error_lower(), []).append(report)
         elif report.skipped:
-            self.stats.setdefault("skipped", []).append(report)
+            self.stats.setdefault(self.language.get_skipped_lower(), []).append(report)
         items = [x for x in report.result if isinstance(x, pytest.Item)]
         self._numcollected += len(items)
         if self.isatty:
@@ -365,14 +365,16 @@ class TerminalReporter:
         errors = len(self.stats.get('error', []))
         skipped = len(self.stats.get('skipped', []))
         if final:
-            line = "collected "
+            line = self.language.get_collected() + " "
         else:
-            line = "collecting "
-        line += str(self._numcollected) + " item" + ('' if self._numcollected == 1 else 's')
+            line = self.language.get_collecting + " "
+
+        line += str(self._numcollected) + " " + (
+        self.language.get_item() if self._numcollected == 1 else self.language.get_item_plural())
         if errors:
-            line += " / %d errors" % errors
+            line += " / %d %s" % (errors, self.language.get_errors_lower())
         if skipped:
-            line += " / %d skipped" % skipped
+            line += " / %d %s" % (skipped, self.language.get_skipped_lower())
         if self.isatty:
             self.rewrite(line, bold=True, erase=True)
             if final:
@@ -632,9 +634,9 @@ class TerminalReporter:
                     # collect
                     msg = self.language.get_errors_collecting() + msg
                 elif rep.when == "setup":
-                    msg = self.language.get_errors_setup() + msg
+                    msg = self.language.get_errors_setup() + " " + msg
                 elif rep.when == "teardown":
-                    msg = self.language.get_errors_teardown() + msg
+                    msg = self.language.get_errors_teardown() + " " + msg
                 self.write_sep("_", msg)
                 self._outrep_summary(rep)
 
@@ -648,7 +650,8 @@ class TerminalReporter:
 
     def summary_stats(self):
         session_duration = time.time() - self._sessionstarttime
-        (line, color) = build_summary_stats_line(self.stats)
+        (line, color) = build_summary_stats_line(self.stats, self.language.get_summary_stats_translations(),
+                                                 self.language.no_tests_ran())
         msg = "%s in %.2f %s" % (line, session_duration, self.language.get_seconds())
         markup = {color: True, 'bold': True}
 
@@ -683,9 +686,11 @@ def flatten(values):
             yield x
 
 
-def build_summary_stats_line(stats):
+def build_summary_stats_line(stats, translation_table=None, no_tests_ran='no tests ran'):
     keys = ("failed passed skipped deselected "
             "xfailed xpassed warnings error").split()
+    if not translation_table:
+        translation_table = {k: k for k in keys}
     unknown_key_seen = False
     # this could be [k for k in stats.keys() if k]
     for key in stats.keys():
@@ -697,12 +702,12 @@ def build_summary_stats_line(stats):
     for key in keys:
         val = stats.get(key, None)
         if val:
-            parts.append("%d %s" % (len(val), key))
+            parts.append("%d %s" % (len(val), translation_table.get(key, key)))
 
     if parts:
         line = ", ".join(parts)
     else:
-        line = "no tests ran"
+        line = no_tests_ran
 
     if 'failed' in stats or 'error' in stats:
         color = 'red'

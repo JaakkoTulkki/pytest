@@ -72,9 +72,44 @@ class Language(metaclass=ABCMeta):
         raise NotImplementedError('Not implemented')
 
     @abstractmethod
-    def build_summary_stats_dict(self):
+    def get_summary_stats_translations(self):
         """
-        required keys "failed passed skipped deselected xfailed xpassed warnings error"
+        return dict that has translations for summary stat line keys
+        e.g. {"failed": "fallados"}
+        required keys with translations are
+        failed passed skipped deselected xfailed xpassed warnings error
         :return: dict
         """
+        raise NotImplementedError('Not implemented')
+
+    @abstractmethod
+    def no_tests_ran(self):
+        raise NotImplementedError('Not implemented')
+
+    @abstractmethod
+    def get_error_lower(self):
+        raise NotImplementedError('Not implemented')
+
+    @abstractmethod
+    def get_errors_lower(self):
+        raise NotImplementedError('Not implemented')
+
+    @abstractmethod
+    def get_skipped_lower(self):
+        raise NotImplementedError('Not implemented')
+
+    @abstractmethod
+    def get_collected(self):
+        raise NotImplementedError('Not implemented')
+
+    @abstractmethod
+    def get_collecting(self):
+        raise NotImplementedError('Not implemented')
+
+    @abstractmethod
+    def get_item(self):
+        raise NotImplementedError('Not implemented')
+
+    @abstractmethod
+    def get_item_plural(self):
         raise NotImplementedError('Not implemented')

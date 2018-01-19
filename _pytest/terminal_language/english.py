@@ -2,9 +2,35 @@ from . import Language
 
 
 class English(Language):
-    def build_summary_stats_dict(self):
-        keys = "failed passed skipped deselected xfailed xpassed warnings error".split()
-        return {k: k for k in keys}
+    def get_item_plural(self):
+        return 'items'
+
+    def get_item(self):
+        return 'item'
+
+    def get_skipped_lower(self):
+        return 'skipped'
+
+    def get_collected(self):
+        return 'collected'
+
+    def get_collecting(self):
+        return 'collecting'
+
+    def get_error_lower(self):
+        return 'error'
+
+    def get_errors_lower(self):
+        return 'errors'
+
+    def no_tests_ran(self):
+        return "no tests ran"
+
+    def get_summary_stats_translations(self):
+        return {'skipped': 'skipped', 'warnings': 'warnings', 'xfailed': 'xfailed', 'xpassed': 'xpassed',
+                'failed': 'failed', 'deselected': 'deselected', 'passed': 'passed', 'error': 'error'}
+
+
 
     def get_session_starts(self):
         return "test session starts"
@@ -16,7 +42,7 @@ class English(Language):
         return "PLUGIN registered: %s" % plugin
 
     def get_internal_error(self):
-        return "INTERNALERROR>"
+        return "INTERNALERROR"
 
     def get_platform(self):
         return "platform"
@@ -46,10 +72,10 @@ class English(Language):
         return "ERROR collecting "
 
     def get_errors_setup(self):
-        return "ERROR at setup of "
+        return "ERROR at setup of"
 
     def get_errors_teardown(self):
-        return "ERROR at teardown of "
+        return "ERROR at teardown of"
 
     def get_seconds(self):
         return "seconds"
