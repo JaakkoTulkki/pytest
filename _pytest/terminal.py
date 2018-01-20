@@ -99,7 +99,16 @@ def getcrashline(rep):
         except AttributeError:
             return ""
 
-def pytest_report_teststatus(report, language):
+def pytest_report_teststatus(report, language=None):
+    """
+    Tried adding to the hooksepc language. However, this broke some tests even though it was not supposed to do it
+    Got an error complaining about "F can not be found in this hook call"
+    https://github.com/pytest-dev/pytest/issues/2979
+
+    :param report:
+    :param language: instance of Language
+    :return:
+    """
     if report.passed:
         letter = "."
     elif report.skipped:
@@ -108,7 +117,12 @@ def pytest_report_teststatus(report, language):
         letter = "F"
         if report.when != "call":
             letter = "f"
-    return report.outcome, letter, language.get_test_result_translation(report.outcome).upper()
+    if language:
+        outcome_result = language.get_test_result_translation(report.outcome).upper()
+    else:
+        outcome_result = report.outcome.upper()
+
+    return report.outcome, letter, outcome_result
 
 
 class WarningReport:
@@ -388,7 +402,7 @@ class TerminalReporter:
         if final:
             line = self.language.get_collected() + " "
         else:
-            line = self.language.get_collecting + " "
+            line = self.language.get_collecting() + " "
 
         line += str(self._numcollected) + " " + (
         self.language.get_item() if self._numcollected == 1 else self.language.get_item_plural())
