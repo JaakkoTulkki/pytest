@@ -99,7 +99,7 @@ def getcrashline(rep):
         except AttributeError:
             return ""
 
-def pytest_report_teststatus(report, language=None):
+def pytest_report_teststatus(report, language):
     """
     :param report:
     :param language: instance of Language
@@ -113,10 +113,7 @@ def pytest_report_teststatus(report, language=None):
         letter = "F"
         if report.when != "call":
             letter = "f"
-    if language:
-        outcome_result = language.get_test_result_translation(report.outcome).upper()
-    else:
-        outcome_result = report.outcome.upper()
+    outcome_result = language.get_test_result_translation(report.outcome).upper()
 
     return report.outcome, letter, outcome_result
 
