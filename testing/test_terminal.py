@@ -634,8 +634,6 @@ def test_color_no(testdir):
     assert 'test session starts' in result.stdout.str()
     assert '\x1b[1m' not in result.stdout.str()
 
-def chicken():
-    raise AttributeError
 
 @pytest.mark.parametrize('verbose', [True, False])
 def test_color_yes_collection_on_non_atty(testdir, verbose):
@@ -828,13 +826,9 @@ def pytest_report_header(config, startdir):
         ])
 
     def test_getcrashline(self):
-        class A:
-            def __str__(self):
-                raise AttributeError
-
-        report = mock.Mock()
-        report.longrepr = A()
-        report.longrepr.reprcrash = A()
+        class Fake:
+            pass
+        report = mock.Mock(spec=Fake)
         crashline = getcrashline(report)
         assert '' == crashline
 
