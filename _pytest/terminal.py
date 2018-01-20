@@ -18,6 +18,7 @@ from _pytest import nodes
 from _pytest.main import EXIT_OK, EXIT_TESTSFAILED, EXIT_INTERRUPTED, \
     EXIT_USAGEERROR, EXIT_NOTESTSCOLLECTED
 from _pytest.terminal_language.english import English
+from _pytest.terminal_language.spanish import Spanish
 
 
 def pytest_addoption(parser):
@@ -50,6 +51,7 @@ def pytest_addoption(parser):
                      action="store", dest="color", default='auto',
                      choices=['yes', 'no', 'auto'],
                      help="color terminal output (yes/no/auto).")
+    group._addoption('--language', default='en', choices=['en', 'es'], help='Select language for the terminal')
 
     parser.addini("console_output_style",
                   help="console output: classic or with additional progress information (classic|progress).",
@@ -97,7 +99,7 @@ def getcrashline(rep):
         except AttributeError:
             return ""
 
-def pytest_report_teststatus(report):
+def pytest_report_teststatus(report, language):
     if report.passed:
         letter = "."
     elif report.skipped:
@@ -106,7 +108,7 @@ def pytest_report_teststatus(report):
         letter = "F"
         if report.when != "call":
             letter = "f"
-    return report.outcome, letter, report.outcome.upper()
+    return report.outcome, letter, language.get_test_result_translation(report.outcome).upper()
 
 
 class WarningReport:
@@ -144,10 +146,15 @@ class WarningReport:
         return None
 
 
+def get_language(config):
+    if config.option.language == 'es':
+        return Spanish()
+    return English()
+
 class TerminalReporter:
-    def __init__(self, config, file=None, language=English):
+    def __init__(self, config, file=None):
         import _pytest.config
-        self.language = language()
+        self.language = get_language(config)
         self.config = config
         self.verbosity = self.config.option.verbose
         self.showheader = self.verbosity >= 0
@@ -285,7 +292,7 @@ class TerminalReporter:
 
     def pytest_runtest_logreport(self, report):
         rep = report
-        res = self.config.hook.pytest_report_teststatus(report=rep)
+        res = self.config.hook.pytest_report_teststatus(report=rep, language=self.language)
         cat, letter, word = res
         if isinstance(word, tuple):
             word, markup = word
@@ -359,7 +366,7 @@ class TerminalReporter:
 
     def pytest_collection(self):
         if not self.isatty and self.config.option.verbose >= 1:
-            self.write("collecting ... ", bold=True)
+            self.write(self.language.get_collecting(), bold=True)
 
     def pytest_collectreport(self, report):
         if report.failed:
@@ -658,7 +665,7 @@ class TerminalReporter:
         session_duration = time.time() - self._sessionstarttime
         (line, color) = build_summary_stats_line(self.stats, self.language.get_summary_stats_translations(),
                                                  self.language.no_tests_ran())
-        msg = "%s in %.2f %s" % (line, session_duration, self.language.get_seconds())
+        msg = self.language.get_summary_stats(line, session_duration)
         markup = {color: True, 'bold': True}
 
         if self.verbosity >= 0:

@@ -2,6 +2,12 @@ from . import Language
 
 
 class English(Language):
+    def get_summary_stats(self, line, session_duration):
+        return "%s in %.2f %s" % (line, session_duration, self.get_seconds())
+
+    def get_test_result_translation(self, result):
+        return result
+
     def get_item_plural(self):
         return 'items'
 

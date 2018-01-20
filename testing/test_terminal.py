@@ -1010,7 +1010,7 @@ class TestProgress:
                 rep.duration = 0.1
                 config.hook.pytest_runtest_logreport(report=rep)
         """)
-        output = testdir.runpytest()
+        output = testdir.runpytest('--language=en')
         assert 'ZeroDivisionError' not in output.stdout.str()
         output.stdout.fnmatch_lines([
             '=* 2 passed in *=',

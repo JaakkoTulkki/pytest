@@ -4,6 +4,10 @@ from abc import ABCMeta, abstractmethod
 class Language(metaclass=ABCMeta):
 
     @abstractmethod
+    def get_summary_stats(self, line, session_duration):
+        raise NotImplementedError('Not implemented')
+
+    @abstractmethod
     def get_show_traceback_instructions(self):
         raise NotImplementedError('Not implemented')
 
@@ -112,4 +116,11 @@ class Language(metaclass=ABCMeta):
 
     @abstractmethod
     def get_item_plural(self):
+        raise NotImplementedError('Not implemented')
+
+    @abstractmethod
+    def get_test_result_translation(self, result):
+        """ result can be "passed", "failed", "skipped"
+            return a correct translation for this
+        """
         raise NotImplementedError('Not implemented')

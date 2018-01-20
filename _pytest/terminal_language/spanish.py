@@ -1,6 +1,16 @@
 from . import Language
 
 class Spanish(Language):
+    def get_summary_stats(self, line, session_duration):
+        return "%s en %.2f %s" % (line, session_duration, self.get_seconds())
+
+    def get_test_result_translation(self, result):
+        return {
+            'skipped': 'omitido',
+            'passed': 'pasado',
+            'failed': 'fallado'
+        }[result]
+
     def get_seconds(self):
         return "segundos"
 
