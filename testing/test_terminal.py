@@ -5,7 +5,6 @@ from __future__ import absolute_import, division, print_function
 import collections
 import sys
 from unittest import mock
-from unittest.mock import patch
 
 import pluggy
 import _pytest._code

@@ -380,7 +380,7 @@ class TerminalReporter:
 
     def pytest_collection(self):
         if not self.isatty and self.config.option.verbose >= 1:
-            self.write(self.language.get_collecting(), bold=True)
+            self.write(self.language.get_collecting() + " ...", bold=True)
 
     def pytest_collectreport(self, report):
         if report.failed:
