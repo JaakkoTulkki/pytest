@@ -445,9 +445,6 @@ def pytest_report_collectionfinish(config, startdir, items):
 def pytest_report_teststatus(report, language):
     """ return result-category, shortletter and verbose word for reporting.
     language is an instance of _pytest.terminal_language.Language abstract class
-    Adding to the hookspec should not break anything but it did...
-    https://docs.pytest.org/en/latest/writing_plugins.html#writing-hook-functions
-
 
     Stops at first non-None result, see :ref:`firstresult` """
 

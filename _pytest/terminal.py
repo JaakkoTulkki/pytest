@@ -101,10 +101,6 @@ def getcrashline(rep):
 
 def pytest_report_teststatus(report, language=None):
     """
-    Tried adding to the hooksepc language. However, this broke some tests even though it was not supposed to do it
-    Got an error complaining about "F can not be found in this hook call"
-    https://github.com/pytest-dev/pytest/issues/2979
-
     :param report:
     :param language: instance of Language
     :return:
