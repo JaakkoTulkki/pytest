@@ -1,5 +1,4 @@
 import sys
-
 import pluggy
 import py
 

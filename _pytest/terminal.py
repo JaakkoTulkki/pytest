@@ -113,7 +113,10 @@ def pytest_report_teststatus(report, language):
         letter = "F"
         if report.when != "call":
             letter = "f"
-    outcome_result = language.get_test_result_translation(report.outcome).upper()
+    if language == None:
+        outcome_result = report.outcome.upper()
+    else:
+        outcome_result = language.get_test_result_translation(report.outcome).upper()
 
     return report.outcome, letter, outcome_result
 
