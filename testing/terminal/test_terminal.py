@@ -268,6 +268,7 @@ class TestCollectonly(object):
         assert result.ret == 3
 
     def test_collectonly_simple(self, testdir):
+        # todo remove comments
         p = testdir.makepyfile("""
             def test_func1():
                 pass
@@ -491,6 +492,7 @@ class TestTerminalFunctional(object):
             ])
 
     def test_showlocals(self, testdir):
+        # todo remove comment
         p1 = testdir.makepyfile("""
             def test_showlocals():
                 x = 3

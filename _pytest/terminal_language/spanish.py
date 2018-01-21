@@ -30,10 +30,10 @@ class Spanish(Language):
         return "plugin registreado"
 
     def get_errors_setup(self):
-        return "ERROR en la preparación de "
+        return "ERROR en la preparación de"
 
     def get_errors_collecting(self):
-        return "ERROR en la colección de "
+        return "ERROR en la colección de"
 
     def no_tests_ran(self):
         return "No se ejecutó ninguna prueba"

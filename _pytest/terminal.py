@@ -158,6 +158,7 @@ def get_language(config):
         return Spanish()
     return English()
 
+
 class TerminalReporter:
     def __init__(self, config, file=None):
         import _pytest.config
