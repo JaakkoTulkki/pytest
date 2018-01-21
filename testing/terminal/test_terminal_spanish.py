@@ -5,7 +5,8 @@ import py
 
 import _pytest
 import pytest
-from _pytest.terminal import TerminalReporter
+from _pytest.terminal import TerminalReporter, build_summary_stats_line
+from _pytest.terminal_language.spanish import Spanish
 
 
 class Option(object):
@@ -418,6 +419,123 @@ def test_terminalreporter_picksup_ini_file(testdir):
     result.stdout.fnmatch_lines([
         "*1 pasado*"
     ])
+
+
+class TestGenericReporting(object):
+    """ this test class can be subclassed with a different option
+        provider to run e.g. distributed tests.
+    """
+
+    def test_collect_fail(self, testdir, option):
+        testdir.makepyfile("import xyz\n")
+        result = testdir.runpytest('--language=es', *option.args)
+        result.stdout.fnmatch_lines([
+            "*1 error*",
+        ])
+
+    def test_maxfailures(self, testdir, option):
+        testdir.makepyfile("""
+            def test_1():
+                assert 0
+            def test_2():
+                assert 0
+            def test_3():
+                assert 0
+        """)
+        result = testdir.runpytest('--language=es', "--maxfail=2", *option.args)
+        result.stdout.fnmatch_lines([
+            "*def test_1():*",
+            "*def test_2():*",
+            "*2 fallado*",
+        ])
+
+
+def test_fdopen_kept_alive_issue124(testdir):
+    testdir.makepyfile("""
+        import os, sys
+        k = []
+        def test_open_file_and_keep_alive(capfd):
+            stdout = os.fdopen(1, 'w', 1)
+            k.append(stdout)
+
+        def test_close_kept_alive_file():
+            stdout = k.pop()
+            stdout.close()
+    """)
+    result = testdir.runpytest('--language=es')
+    result.stdout.fnmatch_lines([
+        "*2 pasado*"
+    ])
+
+
+@pytest.mark.parametrize("exp_color, exp_line, stats_arg", [
+    # The method under test only cares about the length of each
+    # dict value, not the actual contents, so tuples of anything
+    # suffice
+
+    # Important statuses -- the highest priority of these always wins
+    ("red", "1 fallado", {"failed": (1,)}),
+    ("red", "1 fallado, 1 pasado", {"failed": (1,), "passed": (1,)}),
+
+    ("red", "1 error", {"error": (1,)}),
+    ("red", "1 pasado, 1 error", {"error": (1,), "passed": (1,)}),
+
+    # (a status that's not known to the code)
+    ("yellow", "1 weird", {"weird": (1,)}),
+    ("yellow", "1 pasado, 1 weird", {"weird": (1,), "passed": (1,)}),
+
+    ("yellow", "1 advertencias", {"warnings": (1,)}),
+    ("yellow", "1 pasado, 1 advertencias", {"warnings": (1,),
+                                        "passed": (1,)}),
+
+    ("green", "5 pasado", {"passed": (1, 2, 3, 4, 5)}),
+
+
+    # "Boring" statuses.  These have no effect on the color of the summary
+    # line.  Thus, if *every* test has a boring status, the summary line stays
+    # at its default color, i.e. yellow, to warn the user that the test run
+    # produced no useful information
+    ("yellow", "1 omitido", {"skipped": (1,)}),
+    ("green", "1 pasado, 1 omitido", {"skipped": (1,), "passed": (1,)}),
+
+    ("yellow", "1 deseleccionado", {"deselected": (1,)}),
+    ("green", "1 pasado, 1 deseleccionado", {"deselected": (1,), "passed": (1,)}),
+
+    ("yellow", "1 xfailed", {"xfailed": (1,)}),
+    ("green", "1 pasado, 1 xfailed", {"xfailed": (1,), "passed": (1,)}),
+
+    ("yellow", "1 xpassed", {"xpassed": (1,)}),
+    ("green", "1 pasado, 1 xpassed", {"xpassed": (1,), "passed": (1,)}),
+
+    # Likewise if no tests were found at all
+    ("yellow", "No se ejecutó ninguna prueba", {}),
+
+    # Test the empty-key special case
+    ("yellow", "No se ejecutó ninguna prueba", {"": (1,)}),
+    ("green", "1 pasado", {"": (1,), "passed": (1,)}),
+
+
+    # A couple more complex combinations
+    ("red", "1 fallado, 2 pasado, 3 xfailed",
+        {"passed": (1, 2), "failed": (1,), "xfailed": (1, 2, 3)}),
+
+    ("green", "1 pasado, 2 omitido, 3 deseleccionado, 2 xfailed",
+        {"passed": (1,),
+         "skipped": (1, 2),
+         "deselected": (1, 2, 3),
+         "xfailed": (1, 2)}),
+])
+def test_summary_stats(exp_line, exp_color, stats_arg):
+    language = Spanish()
+    print("Based on stats: %s" % stats_arg)
+    print("Expect summary: \"%s\"; with color \"%s\"" % (exp_line, exp_color))
+    (line, color) = build_summary_stats_line(stats_arg,
+                                             translation_table=language.get_summary_stats_translations(),
+                                             no_tests_ran=language.no_tests_ran())
+    print("Actually got:   \"%s\"; with color \"%s\"" % (line, color))
+    assert line == exp_line
+    assert color == exp_color
+
 
 
 class TestProgressSpanish:
