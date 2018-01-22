@@ -365,10 +365,10 @@ class TestGeneralUsage(object):
         assert res.ret == 0
 
     def test_unknown_option(self, testdir):
-        result = testdir.runpytest("--qwlkej")
-        result.stderr.fnmatch_lines("""
+        result = testdir.runpytest("--qwlkej".encode('utf-8'))
+        result.stderr.fnmatch_lines(u"""
             *unrecognized*
-        """)
+        """.encode('utf-8'))
 
     def test_getsourcelines_error_issue553(self, testdir, monkeypatch):
         monkeypatch.setattr("inspect.getsourcelines", None)
@@ -852,14 +852,14 @@ class TestDurationWithFixture(object):
 
     def test_setup_function(self, testdir):
         testdir.makepyfile(self.source)
-        result = testdir.runpytest("--durations=10")
+        result = testdir.runpytest("--durations=10".encode('utf-8'))
         assert result.ret == 0
 
         result.stdout.fnmatch_lines_random("""
             *durations*
             * setup *test_1*
             * call *test_1*
-        """)
+        """.encode('utf-8'))
 
 
 def test_zipimport_hook(testdir, tmpdir):
