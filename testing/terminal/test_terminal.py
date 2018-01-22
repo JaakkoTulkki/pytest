@@ -1,10 +1,15 @@
+# -*- coding: utf-8 -*-
+from __future__ import absolute_import, unicode_literals
 """
 terminal reporting of the full testing process.
 """
 from __future__ import absolute_import, division, print_function
 import collections
 import sys
-from unittest import mock
+try:
+    from unittest import mock
+except:
+    from mock import mock
 
 import pluggy
 import _pytest._code

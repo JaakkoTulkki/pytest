@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from . import Language
 
 
@@ -19,7 +21,7 @@ class Spanish(Language):
         return "omitido"
 
     def get_test_session(self):
-        return "sesión de prueba"
+        return u"sesión de prueba"
 
     def get_platform(self):
         return 'plataforma'
@@ -31,31 +33,31 @@ class Spanish(Language):
         return "plugin registreado"
 
     def get_errors_setup(self):
-        return "ERROR en la preparación de"
+        return u"ERROR en la preparación de"
 
     def get_errors_collecting(self):
-        return "ERROR en la colección de"
+        return u"ERROR en la colección de"
 
     def no_tests_ran(self):
-        return "No se ejecutó ninguna prueba"
+        return u"No se ejecutó ninguna prueba"
 
     def get_internal_error(self):
         return "ERROR INTERNO"
 
     def get_session_starts(self):
-        return "comienza la sesión de prueba"
+        return u"comienza la sesión de prueba"
 
     def get_item(self):
-        return "ítem"
+        return u"ítem"
 
     def get_passes(self):
         return "PASA"
 
     def get_undetermined_location(self):
-        return "ubicación indeterminada"
+        return u"ubicación indeterminada"
 
     def get_colletion_failures(self):
-        return "fallas de colección"
+        return u"fallas de colección"
 
     def get_errors_teardown(self):
         return "ERROR en el desmontaje de"
@@ -77,7 +79,7 @@ class Spanish(Language):
                 'failed': 'fallado', 'deselected': 'deseleccionado', 'passed': 'pasado', 'error': 'error'}
 
     def get_item_plural(self):
-        return "ítems"
+        return u"ítems"
 
     def get_collecting(self):
         return 'coleccionando'

@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+from __future__ import absolute_import, unicode_literals
+
 import sys
 import pluggy
 import py
@@ -74,7 +77,7 @@ class TestTerminal(object):
         ])
 
     def test_itemreport_subclasses_show_subclassed_file(self, testdir):
-        testdir.makepyfile(test_p1="""
+        testdir.makepyfile(test_p="""
             class BaseTests(object):
                 def test_p1(self):
                     pass
@@ -144,7 +147,7 @@ class TestTerminal(object):
                 pass
         """)
         result = testdir.runpytest('--language=es')
-        result.stdout.fnmatch_lines(['coleccionado 1 ítem'])
+        result.stdout.fnmatch_lines([u'coleccionado 1 ítem'])
 
     def test_collect_multiple_items(self, testdir):
         """Use plural 'item' when reporting a single test item"""
