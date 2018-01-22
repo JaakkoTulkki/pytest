@@ -17,8 +17,8 @@ import pytest
 from _pytest import nodes
 from _pytest.main import EXIT_OK, EXIT_TESTSFAILED, EXIT_INTERRUPTED, \
     EXIT_USAGEERROR, EXIT_NOTESTSCOLLECTED
-from .terminal_language.spanish import Spanish
-from .terminal_language.english import English
+from _pytest.terminal_language.spanish import Spanish
+from _pytest.terminal_language.english import English
 
 
 def pytest_addoption(parser):
