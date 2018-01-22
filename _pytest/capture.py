@@ -498,6 +498,7 @@ class FDCapture(FDCaptureBinary):
 
     snap() produces text
     """
+
     def snap(self):
         res = FDCaptureBinary.snap(self)
         enc = getattr(self.tmpfile, "encoding", None)

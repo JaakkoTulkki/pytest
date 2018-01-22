@@ -1,7 +1,8 @@
 from abc import ABCMeta, abstractmethod
 
 
-class Language(metaclass=ABCMeta):
+class Language(object):
+    __metaclass__ = ABCMeta
 
     @abstractmethod
     def get_summary_stats(self, line, session_duration):

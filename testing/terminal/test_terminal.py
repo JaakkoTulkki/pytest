@@ -834,7 +834,6 @@ def pytest_report_header(config, startdir):
         assert '' == crashline
 
 
-
 @pytest.mark.xfail("not hasattr(os, 'dup')")
 def test_fdopen_kept_alive_issue124(testdir):
     testdir.makepyfile("""

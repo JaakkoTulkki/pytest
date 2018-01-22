@@ -99,6 +99,7 @@ def getcrashline(rep):
         except AttributeError:
             return ""
 
+
 def pytest_report_teststatus(report, language):
     """
     :param report:
@@ -193,7 +194,7 @@ class TerminalReporter:
         """
         replaced self._tw.write() with self._write()
         => code in this class should not really care about the api of the terminal writer.
-        
+
         :param args: 
         :param kwargs: 
         :return: 
@@ -402,7 +403,7 @@ class TerminalReporter:
             line = self.language.get_collecting() + " "
 
         line += str(self._numcollected) + " " + (
-        self.language.get_item() if self._numcollected == 1 else self.language.get_item_plural())
+            self.language.get_item() if self._numcollected == 1 else self.language.get_item_plural())
         if errors:
             line += " / %d %s" % (errors, self.language.get_errors_lower())
         if skipped:
@@ -577,7 +578,6 @@ class TerminalReporter:
             return domain
         else:
             return self.language.get_test_session()  # XXX?
-
 
     #
     # summaries for sessionfinish

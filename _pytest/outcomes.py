@@ -11,6 +11,7 @@ class OutcomeException(BaseException):
     """ OutcomeException and its subclass instances indicate and
         contain info about test and collection outcomes.
     """
+
     def __init__(self, msg=None, pytrace=True):
         BaseException.__init__(self, msg)
         self.msg = msg
@@ -46,6 +47,7 @@ class Failed(OutcomeException):
 
 class Exit(KeyboardInterrupt):
     """ raised for immediate program exits (no tracebacks/summaries)"""
+
     def __init__(self, msg="unknown reason"):
         self.msg = msg
         KeyboardInterrupt.__init__(self, msg)

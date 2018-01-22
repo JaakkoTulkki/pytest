@@ -46,7 +46,7 @@ class TestTerminal(object):
             def test_func():
                 assert 0
         """)
-        result = testdir.runpytest('--language=es',*option.args)
+        result = testdir.runpytest('--language=es', *option.args)
         if option.verbose:
             result.stdout.fnmatch_lines([
                 "*test_pass_skip_fail.py::test_ok PASADO*",
@@ -269,7 +269,6 @@ class TestTerminalFunctional(object):
         ])
         assert result.ret == 0
 
-
     def test_passes(self, testdir):
         p1 = testdir.makepyfile("""
             def test_passes():
@@ -331,7 +330,7 @@ class TestTerminalFunctional(object):
 
     def test_quiet_reporting(self, testdir):
         p1 = testdir.makepyfile("def test_pass(): pass")
-        result = testdir.runpytest('--language=es',p1, '-q')
+        result = testdir.runpytest('--language=es', p1, '-q')
         s = result.stdout.str()
         assert 'comienza la sesión de prueba' not in s
         assert p1.basename not in s
@@ -362,7 +361,6 @@ class TestTerminalFunctional(object):
         result.stdout.fnmatch_lines([
             "coleccionado 3 ítems",
         ])
-
 
 
 @pytest.mark.parametrize('verbose', [True, False])
@@ -485,7 +483,7 @@ def test_fdopen_kept_alive_issue124(testdir):
 
     ("yellow", "1 advertencias", {"warnings": (1,)}),
     ("yellow", "1 pasado, 1 advertencias", {"warnings": (1,),
-                                        "passed": (1,)}),
+                                            "passed": (1,)}),
 
     ("green", "5 pasado", {"passed": (1, 2, 3, 4, 5)}),
 
@@ -534,7 +532,6 @@ def test_summary_stats(exp_line, exp_color, stats_arg):
     print("Actually got:   \"%s\"; with color \"%s\"" % (line, color))
     assert line == exp_line
     assert color == exp_color
-
 
 
 class TestProgressSpanish:

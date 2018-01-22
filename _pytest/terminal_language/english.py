@@ -36,8 +36,6 @@ class English(Language):
         return {'skipped': 'skipped', 'warnings': 'warnings', 'xfailed': 'xfailed', 'xpassed': 'xpassed',
                 'failed': 'failed', 'deselected': 'deselected', 'passed': 'passed', 'error': 'error'}
 
-
-
     def get_session_starts(self):
         return "test session starts"
 
@@ -88,5 +86,3 @@ class English(Language):
 
     def get_tests_deselected(self):
         return 'tests deselected'
-
-
