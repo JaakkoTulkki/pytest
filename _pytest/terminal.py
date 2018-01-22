@@ -17,8 +17,8 @@ import pytest
 from _pytest import nodes
 from _pytest.main import EXIT_OK, EXIT_TESTSFAILED, EXIT_INTERRUPTED, \
     EXIT_USAGEERROR, EXIT_NOTESTSCOLLECTED
-from _pytest.terminal_language.english import English
-from _pytest.terminal_language.spanish import Spanish
+from .terminal_language.spanish import Spanish
+from .terminal_language.english import English
 
 
 def pytest_addoption(parser):
@@ -114,7 +114,7 @@ def pytest_report_teststatus(report, language):
         letter = "F"
         if report.when != "call":
             letter = "f"
-    if language == None:
+    if language is None:
         outcome_result = report.outcome.upper()
     else:
         outcome_result = language.get_test_result_translation(report.outcome).upper()
@@ -194,10 +194,9 @@ class TerminalReporter:
         """
         replaced self._tw.write() with self._write()
         => code in this class should not really care about the api of the terminal writer.
-
-        :param args: 
-        :param kwargs: 
-        :return: 
+        :param args:
+        :param kwargs:
+        :return:
         """
         self._tw.write(*args, **kwargs)
 
