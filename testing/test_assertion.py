@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import, unicode_literals, division, print_function
+from __future__ import absolute_import, division, print_function
 import sys
 import textwrap
 
@@ -271,9 +271,9 @@ class TestImportHookInstallation(object):
 
     def test_register_assert_rewrite_checks_types(self):
         with pytest.raises(TypeError):
-            pytest.register_assert_rewrite(['pytest_tests_internal_non_existing'])
-        pytest.register_assert_rewrite('pytest_tests_internal_non_existing',
-                                       'pytest_tests_internal_non_existing2')
+            pytest.register_assert_rewrite([str('pytest_tests_internal_non_existing')])
+        pytest.register_assert_rewrite(str('pytest_tests_internal_non_existing'),
+                                       str('pytest_tests_internal_non_existing2'))
 
 
 class TestBinReprIntegration(object):
@@ -412,9 +412,9 @@ class TestAssert_reprcompare(object):
 
     def test_dict_omitting_with_verbosity_2(self):
         lines = callequal({'a': 0, 'b': 1}, {'a': 1, 'b': 1}, verbose=2)
-        assert lines[1].startswith('Common items:')
+        assert lines[1].startswith(str('Common items:'))
         assert 'Omitting' not in lines[1]
-        assert lines[2] == "{'b': 1}"
+        assert str(lines[2]) == str("{'b': 1}")
 
     def test_set(self):
         expl = callequal(set([0, 1]), set([0, 2]))
@@ -920,18 +920,18 @@ def test_warn_missing(testdir):
 
 
 def test_recursion_source_decode(testdir):
-    testdir.makepyfile("""
+    testdir.makepyfile(str("""
         def test_something():
             pass
-    """)
-    testdir.makeini("""
+    """))
+    testdir.makeini(str("""
         [pytest]
         python_files = *.py
-    """)
+    """))
     result = testdir.runpytest("--collect-only")
-    result.stdout.fnmatch_lines("""
+    result.stdout.fnmatch_lines(str("""
         <Module*>
-    """)
+    """))
 
 
 def test_AssertionError_message(testdir):
@@ -986,18 +986,18 @@ def test_set_with_unsortable_elements():
 
 
 def test_diff_newline_at_end(monkeypatch, testdir):
-    testdir.makepyfile(r"""
+    testdir.makepyfile(str("""
         def test_diff():
-            assert 'asdf' == 'asdf\n'
-    """)
+            assert 'asdf' == 'asdf\\n'
+    """))
 
     result = testdir.runpytest()
-    result.stdout.fnmatch_lines(r"""
-        *assert 'asdf' == 'asdf\n'
+    result.stdout.fnmatch_lines(str("""
+        *assert 'asdf' == 'asdf\\n'
         *  - asdf
         *  + asdf
         *  ?     +
-    """)
+    """))
 
 
 def test_assert_tuple_warning(testdir):
