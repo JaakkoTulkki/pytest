@@ -565,7 +565,7 @@ class TestProgressSpanish:
         testdir.makeconftest("""
         def pytest_collection_modifyitems(items, config):
             from _pytest.runner import CollectReport
-            from _pytest.terminal_language.spanish import Spanish
+            from _pytest.spanish import Spanish
             for node_id in ('nodeid1', 'nodeid2'):
                 rep = CollectReport(node_id, 'passed', None, None)
                 rep.when = 'passed'

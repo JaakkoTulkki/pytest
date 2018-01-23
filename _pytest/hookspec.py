@@ -444,7 +444,7 @@ def pytest_report_collectionfinish(config, startdir, items):
 @hookspec(firstresult=True)
 def pytest_report_teststatus(report, language):
     """ return result-category, shortletter and verbose word for reporting.
-    language is an instance of _pytest.terminal_language.Language abstract class
+    language is an instance of _pytest.language.Language abstract class
 
     Stops at first non-None result, see :ref:`firstresult` """
 
