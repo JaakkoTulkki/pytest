@@ -20,6 +20,7 @@ except ImportError:
 from _pytest.config import directory_arg, UsageError, hookimpl
 from _pytest.outcomes import exit
 from _pytest.runner import collect_one_node
+from six import string_types
 
 tracebackcutdir = py.path.local(_pytest.__file__).dirpath()
 
@@ -372,7 +373,7 @@ class Node(object):
     def warn(self, code, message):
         """ generate a warning with the given code and message for this
         item. """
-        assert isinstance(code, str)
+        assert isinstance(code, string_types)
         fslocation = getattr(self, "location", None)
         if fslocation is None:
             fslocation = getattr(self, "fspath", None)
