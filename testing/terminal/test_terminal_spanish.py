@@ -77,21 +77,21 @@ class TestTerminal(object):
         ])
 
     def test_itemreport_subclasses_show_subclassed_file(self, testdir):
-        testdir.makepyfile(test_p="""
+        testdir.makepyfile(test_p1=str("""
             class BaseTests(object):
                 def test_p1(self):
                     pass
             class TestClass(BaseTests):
                 pass
-        """)
-        p2 = testdir.makepyfile(test_p2="""
+        """))
+        p2 = testdir.makepyfile(test_p2=str("""
             from test_p1 import BaseTests
             class TestMore(BaseTests):
                 pass
-        """)
+        """))
         result = testdir.runpytest('--language=es', p2)
         result.stdout.fnmatch_lines([
-            "*test_p2.py .*",
+            "*test_p2.py*",
             "*1 pasado*",
         ])
         result = testdir.runpytest("-v", '--language=es', p2)
