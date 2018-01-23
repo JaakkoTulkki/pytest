@@ -137,17 +137,17 @@ class TestGeneralUsage(object):
         ])
 
     def test_issue486_better_reporting_on_conftest_load_failure(self, testdir):
-        testdir.makepyfile("")
-        testdir.makeconftest("import qwerty")
-        result = testdir.runpytest("--help")
-        result.stdout.fnmatch_lines("""
+        testdir.makepyfile(str(""))
+        testdir.makeconftest(str("import qwerty"))
+        result = testdir.runpytest(str("--help"))
+        result.stdout.fnmatch_lines(str("""
             *--version*
             *warning*conftest.py*
-        """)
+        """))
         result = testdir.runpytest()
-        result.stderr.fnmatch_lines("""
+        result.stderr.fnmatch_lines(str("""
             *ERROR*could not load*conftest.py*
-        """)
+        """))
 
     def test_early_skip(self, testdir):
         testdir.mkdir("xyz")
@@ -399,7 +399,7 @@ class TestGeneralUsage(object):
 
         p = tmpdir.join('test_test_plugins_given_as_strings.py')
         p.write('def test_foo(): pass')
-        mod = types.ModuleType("myplugin")
+        mod = types.ModuleType(str("myplugin"))
         monkeypatch.setitem(sys.modules, 'myplugin', mod)
         assert pytest.main(args=[str(tmpdir)], plugins=['myplugin']) == 0
 

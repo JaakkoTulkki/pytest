@@ -134,13 +134,14 @@ def get_plugin_manager():
 
 
 def _prepareconfig(args=None, plugins=None):
+    from six import string_types
     warning = None
     if args is None:
         args = sys.argv[1:]
     elif isinstance(args, py.path.local):
         args = [str(args)]
     elif not isinstance(args, (tuple, list)):
-        if not isinstance(args, str):
+        if not isinstance(args, string_types):
             raise ValueError("not a string or argument list: %r" % (args,))
         args = shlex.split(args, posix=sys.platform != "win32")
         from _pytest import deprecated
