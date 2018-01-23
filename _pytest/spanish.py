@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from . import Language
+from .language import Language
 
 
 class Spanish(Language):

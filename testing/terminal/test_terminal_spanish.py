@@ -8,7 +8,7 @@ import py
 import _pytest
 import pytest
 from _pytest.terminal import TerminalReporter, build_summary_stats_line
-from _pytest.terminal_language.spanish import Spanish
+from _pytest.spanish import Spanish
 
 
 class Option(object):

@@ -1,4 +1,4 @@
-from . import Language
+from .language import Language
 
 
 class English(Language):
