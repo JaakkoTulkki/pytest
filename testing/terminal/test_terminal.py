@@ -92,12 +92,12 @@ class TestTerminal(object):
         ])
 
     def test_internalerror(self, testdir, linecomp):
-        modcol = testdir.getmodulecol("def test_one(): pass")
+        modcol = testdir.getmodulecol(str("def test_one(): pass"))
         rep = TerminalReporter(modcol.config, file=linecomp.stringio)
-        excinfo = pytest.raises(ValueError, "raise ValueError('hello')")
+        excinfo = pytest.raises(ValueError, str("raise ValueError('hello')"))
         rep.pytest_internalerror(excinfo.getrepr())
         linecomp.assert_contains_lines([
-            "INTERNALERROR> *ValueError*hello*"
+            str("INTERNALERROR> *ValueError*hello*")
         ])
 
     def test_writeline(self, testdir, linecomp):
@@ -874,19 +874,19 @@ def test_tbstyle_native_setup_error(testdir):
 
 
 def test_terminal_summary(testdir):
-    testdir.makeconftest("""
+    testdir.makeconftest(str("""
         def pytest_terminal_summary(terminalreporter, exitstatus):
             w = terminalreporter
             w.section("hello")
             w.line("world")
             w.line("exitstatus: {0}".format(exitstatus))
-    """)
+    """))
     result = testdir.runpytest()
-    result.stdout.fnmatch_lines("""
+    result.stdout.fnmatch_lines(str("""
         *==== hello ====*
         world
         exitstatus: 5
-    """)
+    """))
 
 
 def test_terminal_summary_warnings_are_displayed(testdir):
