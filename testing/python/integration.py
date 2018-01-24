@@ -96,7 +96,14 @@ class TestMockDecoration(object):
         values = getfuncargnames(f)
         assert values == ("x",)
 
+    @pytest.mark.skip('bug')
     def test_wrapped_getfuncargnames_patching(self):
+        """
+        This is skipped because in the "num_mock_patch_args()" used in "getfuncargnames()" would raise an
+        Exception if a previous test had imported "mock"
+
+        For details, see https://bugs.gentoo.org/593902
+        """
         from _pytest.compat import getfuncargnames
 
         def wrap(f):
