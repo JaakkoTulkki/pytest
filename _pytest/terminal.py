@@ -8,6 +8,7 @@ import itertools
 import platform
 import sys
 import time
+from enum import Enum
 
 import pluggy
 import py
@@ -19,6 +20,12 @@ from _pytest.main import EXIT_OK, EXIT_TESTSFAILED, EXIT_INTERRUPTED, \
     EXIT_USAGEERROR, EXIT_NOTESTSCOLLECTED
 from _pytest.spanish import Spanish
 from _pytest.english import English
+
+
+class TerminalVerbose(Enum):
+    quiet = -1
+    default = 0
+    verbose = 1
 
 
 def pytest_addoption(parser):
@@ -376,8 +383,21 @@ class TerminalReporter:
         self.write(fill + msg, cyan=True)
 
     def pytest_collection(self):
-        if not self.isatty and self.config.option.verbose >= 1:
+        if not self.isatty and self.is_verbose():
             self.write(self.language.get_collecting() + " ...", bold=True)
+
+    def is_verbose(self):
+        return self.verbosity >= TerminalVerbose.verbose.value
+
+    def is_quiet(self):
+        return self.verbosity == TerminalVerbose.quiet.value
+
+    def is_more_quiet(self):
+        return self.verbosity < TerminalVerbose.quiet.value
+
+    def has_default_verbosity(self):
+        return self.verbosity == TerminalVerbose.default.value
+
 
     def pytest_collectreport(self, report):
         if report.failed:
@@ -391,7 +411,7 @@ class TerminalReporter:
             self.report_collect()
 
     def report_collect(self, final=False):
-        if self.config.option.verbose < 0:
+        if self.is_quiet():
             return
 
         errors = len(self.stats.get('error', []))
@@ -475,43 +495,35 @@ class TerminalReporter:
         self._write_report_lines_from_hooks(lines)
 
     def _printcollecteditems(self, items):
-        # todo refactor this
         # to print out items and their parent collectors
         # we take care to leave out Instances aka ()
         # because later versions are going to get rid of them anyway
 
-        # magic number
-        # one if too many statements
-        if self.config.option.verbose < 0:
-            if self.config.option.verbose < -1:
-                counts = {}
-                for item in items:
-                    name = item.nodeid.split('::', 1)[0]
-                    counts[name] = counts.get(name, 0) + 1
-                for name, count in sorted(counts.items()):
-                    self._write_line("%s: %d" % (name, count))
-            else:
-                for item in items:
-                    nodeid = item.nodeid
-                    nodeid = nodeid.replace("::()::", "::")
-                    self._write_line(nodeid)
-            return
-        stack = []
-        # remove this unneccesary variable
-        # indent = ""
-        for item in items:
-            needed_collectors = item.listchain()[1:]  # strip root node
-            while stack:
-                if stack == needed_collectors[:len(stack)]:
-                    break
-                stack.pop()
-            for col in needed_collectors[len(stack):]:
-                stack.append(col)
-                # todo remove this dead code
-                # if col.name == "()":
-                #    continue
-                indent = (len(stack) - 1) * "  "
-                self._write_line("%s%s" % (indent, col))
+        if self.is_more_quiet():
+            counts = {}
+            for item in items:
+                name = item.nodeid.split('::', 1)[0]
+                counts[name] = counts.get(name, 0) + 1
+            for name, count in sorted(counts.items()):
+                self._write_line("%s: %d" % (name, count))
+
+        elif self.is_quiet():
+            for item in items:
+                nodeid = item.nodeid
+                nodeid = nodeid.replace("::()::", "::")
+                self._write_line(nodeid)
+        else:
+            stack = []
+            for item in items:
+                needed_collectors = item.listchain()[1:]  # strip root node
+                while stack:
+                    if stack == needed_collectors[:len(stack)]:
+                        break
+                    stack.pop()
+                for col in needed_collectors[len(stack):]:
+                    stack.append(col)
+                    indent = (len(stack) - 1) * "  "
+                    self._write_line("%s%s" % (indent, col))
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_sessionfinish(self, exitstatus):
@@ -678,9 +690,9 @@ class TerminalReporter:
         msg = self.language.get_summary_stats(line, session_duration)
         markup = {color: True, 'bold': True}
 
-        if self.verbosity >= 0:
+        if self.has_default_verbosity() or self.is_verbose():
             self.write_sep("=", msg, **markup)
-        if self.verbosity == -1:
+        if self.is_quiet():
             self.write_line(msg, **markup)
 
     def summary_deselected(self):
