@@ -109,7 +109,7 @@ def getcrashline(rep):
 
 def pytest_report_teststatus(report, language):
     """
-    :param report:
+    :param report: instance or _pytest.runner.TestReport
     :param language: instance of Language
     :return:
     """
@@ -119,8 +119,6 @@ def pytest_report_teststatus(report, language):
         letter = "s"
     elif report.failed:
         letter = "F"
-        if report.when != "call":
-            letter = "f"
     if language is None:
         outcome_result = report.outcome.upper()
     else:
@@ -187,6 +185,7 @@ class TerminalReporter:
         # self.writer will be deprecated in pytest-3.4
         self.writer = self._tw
         self._screen_width = self._tw.fullwidth
+        # must be file system path
         self.currentfspath = None
         self.reportchars = getreportopt(config)
         self.hasmarkup = self._tw.hasmarkup

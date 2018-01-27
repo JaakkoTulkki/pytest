@@ -905,6 +905,47 @@ def test_terminal_summary_warnings_are_displayed(testdir):
     ])
 
 
+def test_terminal_summary_warnings_are_displayed_with_node_ids(testdir):
+    testdir.makeconftest("""
+            def pytest_terminal_summary(terminalreporter):
+                config = terminalreporter.config
+                config.warn('C1', 'internal warning', nodeid='node_id1')
+        """)
+    result = testdir.runpytest('-rw')
+    result.stdout.fnmatch_lines([
+        'node_id1',
+        '*internal warning',
+        '*== 1 warnings in *',
+    ])
+
+
+def test_terminal_summary_warnings_are_displayed_with_fslocation(testdir):
+    testdir.makeconftest("""
+            def pytest_terminal_summary(terminalreporter):
+                config = terminalreporter.config
+                config.warn('C1', 'internal warning', fslocation='/home/test.py')
+        """)
+    result = testdir.runpytest('-rw')
+    result.stdout.fnmatch_lines([
+        '/home/test.py',
+        '*internal warning',
+        '*== 1 warnings in *',
+    ])
+
+def test_terminal_summary_warnings_are_displayed_with_fslocation_as_tuple(testdir):
+    testdir.makeconftest("""
+            def pytest_terminal_summary(terminalreporter):
+                config = terminalreporter.config
+                config.warn('C1', 'internal warning', fslocation=('test_terminal.py', 33))
+        """)
+    result = testdir.runpytest('-rw')
+    result.stdout.fnmatch_lines([
+        'test_terminal.py:33',
+        '*internal warning',
+        '*== 1 warnings in *',
+    ])
+
+
 @pytest.mark.parametrize("exp_color, exp_line, stats_arg", [
     # The method under test only cares about the length of each
     # dict value, not the actual contents, so tuples of anything
