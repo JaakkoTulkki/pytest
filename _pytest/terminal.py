@@ -176,9 +176,6 @@ class TerminalReporter:
         self.language = get_language(config)
         self.config = config
         self.verbosity = self.config.option.verbose
-        self.showheader = self.verbosity >= 0
-        self.showfspath = self.verbosity >= 0
-        self.showlongtestinfo = self.verbosity > 0
         self._numcollected = 0
         self._session = None
 
@@ -197,14 +194,13 @@ class TerminalReporter:
         self._progress_items_reported = 0
         self._show_progress_info = self.config.getini('console_output_style') == 'progress'
 
+    def _show_long_test_info(self):
+        return self._is_verbose()
+
+    def _show_fs_path(self):
+        return self._has_default_verbosity() or self._is_verbose()
+
     def _write(self, *args, **kwargs):
-        """
-        replaced self._tw.write() with self._write()
-        => code in this class should not really care about the api of the terminal writer.
-        :param args:
-        :param kwargs:
-        :return:
-        """
         self._tw.write(*args, **kwargs)
 
     def hasopt(self, char):
@@ -301,10 +297,10 @@ class TerminalReporter:
     def pytest_runtest_logstart(self, nodeid, location):
         # ensure that the path is printed before the
         # 1st test of a module starts running
-        if self.showlongtestinfo:
+        if self._show_long_test_info():
             line = self._locationline(nodeid, *location)
             self.write_ensure_prefix(line, "")
-        elif self.showfspath:
+        elif self._show_fs_path():
             fsid = nodeid.split("::")[0]
             self.write_fspath_result(fsid, "")
 
@@ -324,7 +320,7 @@ class TerminalReporter:
         running_xdist = hasattr(rep, 'node')
         self._progress_items_reported += 1
         if self.verbosity <= 0:
-            if not running_xdist and self.showfspath:
+            if not running_xdist and self._show_fs_path():
                 self.write_fspath_result(rep.nodeid, letter)
             else:
                 self._write(letter)
@@ -383,20 +379,23 @@ class TerminalReporter:
         self.write(fill + msg, cyan=True)
 
     def pytest_collection(self):
-        if not self.isatty and self.is_verbose():
+        if not self.isatty and self._is_verbose():
             self.write(self.language.get_collecting() + " ...", bold=True)
 
-    def is_verbose(self):
+    def _is_verbose(self):
         return self.verbosity >= TerminalVerbose.verbose.value
 
-    def is_quiet(self):
+    def _is_quiet(self):
         return self.verbosity == TerminalVerbose.quiet.value
 
-    def is_more_quiet(self):
+    def _is_more_quiet(self):
         return self.verbosity < TerminalVerbose.quiet.value
 
-    def has_default_verbosity(self):
+    def _has_default_verbosity(self):
         return self.verbosity == TerminalVerbose.default.value
+
+    def _showheader(self):
+        return self._has_default_verbosity() or self._is_verbose()
 
 
     def pytest_collectreport(self, report):
@@ -411,7 +410,7 @@ class TerminalReporter:
             self.report_collect()
 
     def report_collect(self, final=False):
-        if self.is_quiet():
+        if self._is_quiet():
             return
 
         errors = len(self.stats.get('error', []))
@@ -441,7 +440,7 @@ class TerminalReporter:
     def pytest_sessionstart(self, session):
         self._session = session
         self._sessionstarttime = time.time()
-        if not self.showheader:
+        if not self._showheader():
             return
         self.write_sep("=", self.language.get_session_starts(), bold=True)
         verinfo = platform.python_version()
@@ -499,7 +498,7 @@ class TerminalReporter:
         # we take care to leave out Instances aka ()
         # because later versions are going to get rid of them anyway
 
-        if self.is_more_quiet():
+        if self._is_more_quiet():
             counts = {}
             for item in items:
                 name = item.nodeid.split('::', 1)[0]
@@ -507,7 +506,7 @@ class TerminalReporter:
             for name, count in sorted(counts.items()):
                 self._write_line("%s: %d" % (name, count))
 
-        elif self.is_quiet():
+        elif self._is_quiet():
             for item in items:
                 nodeid = item.nodeid
                 nodeid = nodeid.replace("::()::", "::")
@@ -690,9 +689,9 @@ class TerminalReporter:
         msg = self.language.get_summary_stats(line, session_duration)
         markup = {color: True, 'bold': True}
 
-        if self.has_default_verbosity() or self.is_verbose():
+        if self._has_default_verbosity() or self._is_verbose():
             self.write_sep("=", msg, **markup)
-        if self.is_quiet():
+        if self._is_quiet():
             self.write_line(msg, **markup)
 
     def summary_deselected(self):
