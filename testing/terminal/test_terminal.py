@@ -1068,6 +1068,31 @@ class TestProgress:
             '=* 2 passed in *=',
         ])
 
+    def test_zero_tests_collected_with_verbose_and_xdist(self, testdir):
+        testdir.makeconftest("""
+        def pytest_collection_modifyitems(items, config):
+            try:
+                from unittest import mock
+            except:
+                from mock import mock
+
+            from _pytest.runner import CollectReport
+            for node_id in ('nodeid1', 'nodeid2'):
+                rep = CollectReport(node_id, 'passed', None, None)
+                rep.when = 'passed'
+                rep.duration = 0.1
+                xdist = mock.Mock()
+                xdist.gateway.id = 'mocked xdist'
+                rep.node = xdist
+                config.hook.pytest_runtest_logreport(report=rep)
+        """)
+        output = testdir.runpytest('--language=en', '-v')
+        assert 'ZeroDivisionError' not in output.stdout.str()
+        output.stdout.fnmatch_lines([
+            '[mocked xdist] [100%] PASSED nodeid1 ',
+            '=* 2 passed in *=',
+        ])
+
     def test_normal(self, many_tests_file, testdir):
         output = testdir.runpytest()
         output.stdout.re_match_lines([
