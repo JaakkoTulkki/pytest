@@ -65,15 +65,19 @@ def pytest_addoption(parser):
                   default='progress')
 
 
+def mywriter(reporter):
+    def writer(tags, args):
+        msg = " ".join(map(str, args))
+        reporter.write_line("[traceconfig] " + msg)
+    return writer
+
+
 def pytest_configure(config):
     config.option.verbose -= config.option.quiet
     reporter = TerminalReporter(config, sys.stdout)
     config.pluginmanager.register(reporter, 'terminalreporter')
     if config.option.debug or config.option.traceconfig:
-        def mywriter(tags, args):
-            msg = " ".join(map(str, args))
-            reporter.write_line("[traceconfig] " + msg)
-        config.trace.root.setprocessor("pytest:config", mywriter)
+        config.trace.root.setprocessor("pytest:config", mywriter(reporter))
 
 
 def getreportopt(config):

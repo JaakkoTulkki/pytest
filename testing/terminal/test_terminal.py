@@ -16,7 +16,7 @@ import py
 import pytest
 from _pytest.main import EXIT_NOTESTSCOLLECTED
 from _pytest.terminal import TerminalReporter, repr_pythonversion, getreportopt, getcrashline
-from _pytest.terminal import build_summary_stats_line, _plugin_nameversions
+from _pytest.terminal import build_summary_stats_line, _plugin_nameversions, mywriter
 
 
 DistInfo = collections.namedtuple('DistInfo', ['project_name', 'version'])
@@ -62,6 +62,13 @@ def test_plugin_nameversion(input, expected):
     result = _plugin_nameversions(pluginlist)
     assert result == expected
 
+
+def test_my_writer():
+    expected_call = "[traceconfig] a 1"
+    reporter = mock.Mock()
+    writer = mywriter(reporter)
+    writer(None, ['a', 1])
+    reporter.write_line.assert_called_with(expected_call)
 
 class TestTerminal(object):
     def test_pass_skip_fail(self, testdir, option):
