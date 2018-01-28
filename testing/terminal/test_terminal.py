@@ -16,7 +16,7 @@ import py
 import pytest
 from _pytest.main import EXIT_NOTESTSCOLLECTED
 from _pytest.terminal import TerminalReporter, repr_pythonversion, getreportopt, getcrashline
-from _pytest.terminal import build_summary_stats_line, _plugin_nameversions, mywriter
+from _pytest.terminal import build_summary_stats_line, _plugin_nameversions, mywriter, get_pypy_version_message
 
 
 DistInfo = collections.namedtuple('DistInfo', ['project_name', 'version'])
@@ -69,6 +69,13 @@ def test_my_writer():
     writer = mywriter(reporter)
     writer(None, ['a', 1])
     reporter.write_line.assert_called_with(expected_call)
+
+
+def test_get_pypy_version_message():
+    with mock.patch.object(sys, 'pypy_version_info', create=True) as mock_obj:
+        actual = get_pypy_version_message()
+        assert actual.startswith('[pypy--<MagicMock')
+
 
 class TestTerminal(object):
     def test_pass_skip_fail(self, testdir, option):

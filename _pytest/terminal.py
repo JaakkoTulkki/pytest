@@ -72,6 +72,11 @@ def mywriter(reporter):
     return writer
 
 
+def get_pypy_version_message():
+    verinfo = ".".join(map(str, sys.pypy_version_info[:3]))
+    return "[pypy-%s-%s]" % (verinfo, sys.pypy_version_info[3])
+
+
 def pytest_configure(config):
     config.option.verbose -= config.option.quiet
     reporter = TerminalReporter(config, sys.stdout)
@@ -450,8 +455,7 @@ class TerminalReporter:
         msg = "%s %s -- Python %s" % (self.language.get_platform(),
                                       sys.platform, verinfo)
         if hasattr(sys, 'pypy_version_info'):
-            verinfo = ".".join(map(str, sys.pypy_version_info[:3]))
-            msg += "[pypy-%s-%s]" % (verinfo, sys.pypy_version_info[3])
+            msg += get_pypy_version_message()
         msg += ", pytest-%s, py-%s, pluggy-%s" % (
                pytest.__version__, py.__version__, pluggy.__version__)
         # the getattr(self.config.option, 'pastebin', None) means that the
