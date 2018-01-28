@@ -295,6 +295,23 @@ class TestCollectonly(object):
             "*1 error*",
         ])
 
+    def test_collectonly_failed_test(self, testdir):
+        config = testdir.parseconfig()
+        config.option.collectonly = True
+
+        f = py.io.TextIO()
+        tr = TerminalReporter(config, f)
+        tr._tw.fullwidth = 10
+        session = mock.Mock()
+        session.items = []
+        report = mock.Mock()
+        tr.stats['failed'] = [report, report]
+
+        tr.pytest_collection_finish(session)
+
+        assert report.toterminal.call_count == 2
+        assert f.getvalue() == ' collection failures \n'
+
     def test_collectonly_fatal(self, testdir):
         testdir.makeconftest("""
             def pytest_collectstart(collector):
