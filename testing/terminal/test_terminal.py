@@ -135,6 +135,27 @@ class TestTerminal(object):
             "*test_show_runtest_logstart.py*"
         ])
 
+    def test_isatty_report_collect_final(self, testdir, linecomp, monkeypatch):
+        config = testdir.parseconfig()
+        f = py.io.TextIO()
+        monkeypatch.setattr(f, 'isatty', lambda *args: True)
+        tr = TerminalReporter(config, f)
+        tr._tw.fullwidth = 10
+        tr.report_collect(final=True)
+
+        assert f.getvalue() == '\x1b[1m\rcollected 0 items\x1b[0m\n'
+
+    def test_isatty_report_collect_non_final(self, testdir, linecomp, monkeypatch):
+        config = testdir.parseconfig()
+        f = py.io.TextIO()
+        monkeypatch.setattr(f, 'isatty', lambda *args: True)
+        tr = TerminalReporter(config, f)
+        tr.stats = {'skipped': [1, 2]}
+        tr._tw.fullwidth = 10
+        tr.report_collect(final=False)
+
+        assert f.getvalue() == '\x1b[1m\rcollecting 0 items / 2 skipped\x1b[0m'
+
     def test_runtest_location_shown_before_test_starts(self, testdir):
         testdir.makepyfile("""
             def test_1():
