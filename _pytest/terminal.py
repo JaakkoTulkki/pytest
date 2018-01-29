@@ -178,9 +178,12 @@ def get_language(config):
 
 
 class TerminalReporter:
-    def __init__(self, config, file=None):
+
+    _PROGRESS_LENGTH = len(' [100%]')
+
+    def __init__(self, config, file=None, language=None):
         import _pytest.config
-        self.language = get_language(config)
+        self.language = get_language(config) if language is None else language()
         self.config = config
         self.verbosity = self.config.option.verbose
         self._numcollected = 0
@@ -201,85 +204,6 @@ class TerminalReporter:
         self.isatty = file.isatty()
         self._progress_items_reported = 0
         self._show_progress_info = self.config.getini('console_output_style') == 'progress'
-
-    def _show_long_test_info(self):
-        return self._is_verbose()
-
-    def _show_fs_path(self):
-        return self._has_default_verbosity() or self._is_verbose()
-
-    def _write(self, *args, **kwargs):
-        self._tw.write(*args, **kwargs)
-
-    def hasopt(self, char):
-        char = {'xfailed': 'x', 'skipped': 's'}.get(char, char)
-        return char in self.reportchars
-
-    def write_fspath_result(self, nodeid, res):
-        fspath = self.config.rootdir.join(nodeid.split("::")[0])
-        if fspath != self.currentfspath:
-            if self.currentfspath is not None:
-                self._write_progress_information_filling_space()
-            self.currentfspath = fspath
-            fspath = self.startdir.bestrelpath(fspath)
-            self._write_line()
-            self._write(fspath + " ")
-        self._write(res)
-
-    def _write_line(self, *args, **kwargs):
-        self._tw.line(*args, **kwargs)
-
-    def write_ensure_prefix(self, prefix, extra="", **kwargs):
-        if self.currentfspath != prefix:
-            self._write_line()
-            self.currentfspath = prefix
-            self._write(prefix)
-        if extra:
-            self._write(extra, **kwargs)
-            self.currentfspath = -2
-            self._write_progress_information_filling_space()
-
-    def ensure_newline(self):
-        if self.currentfspath:
-            self._write_line()
-            self.currentfspath = None
-
-    def write(self, content, **markup):
-        self._write(content, **markup)
-
-    def write_line(self, line, **markup):
-        if not isinstance(line, six.text_type):
-            line = six.text_type(line, errors="replace")
-        self.ensure_newline()
-        self._write_line(line, **markup)
-
-    def rewrite(self, line, **markup):
-        """
-        Rewinds the terminal cursor to the beginning and writes the given line.
-
-        :kwarg erase: if True, will also add spaces until the full terminal width to ensure
-            previous lines are properly erased.
-
-        The rest of the keyword arguments are markup instructions.
-        """
-        erase = markup.pop('erase', False)
-        if erase:
-            fill_count = self._tw.fullwidth - len(line) - 1
-            fill = ' ' * fill_count
-        else:
-            fill = ''
-        line = str(line)
-        self._write("\r" + line + fill, **markup)
-
-    def write_sep(self, sep, title=None, **markup):
-        self.ensure_newline()
-        self._tw.sep(sep, title, **markup)
-
-    def section(self, title, sep="=", **kw):
-        self._tw.sep(sep, title, **kw)
-
-    def line(self, msg, **kw):
-        self._write_line(msg, **kw)
 
     def pytest_internalerror(self, excrepr):
         for line in six.text_type(excrepr).split("\n"):
@@ -307,7 +231,7 @@ class TerminalReporter:
         # 1st test of a module starts running
         if self._show_long_test_info():
             line = self._locationline(nodeid, *location)
-            self.write_ensure_prefix(line, "")
+            self._write_ensure_prefix(line, "")
         elif self._show_fs_path():
             fsid = nodeid.split("::")[0]
             self.write_fspath_result(fsid, "")
@@ -345,9 +269,9 @@ class TerminalReporter:
                     markup = {}
             line = self._locationline(rep.nodeid, *rep.location)
             if not running_xdist:
-                self.write_ensure_prefix(line, word, **markup)
+                self._write_ensure_prefix(line, word, **markup)
             else:
-                self.ensure_newline()
+                self._ensure_newline()
                 self._write("[%s]" % rep.node.gateway.id)
                 if self._show_progress_info:
                     self._write(self._get_progress_information_message() + " ", cyan=True)
@@ -357,54 +281,9 @@ class TerminalReporter:
                 self._write(" " + line)
                 self.currentfspath = -2
 
-    def _write_progress_if_past_edge(self):
-        if not self._show_progress_info:
-            return
-        last_item = self._progress_items_reported == self._session.testscollected
-        if last_item:
-            self._write_progress_information_filling_space()
-            return
-
-        past_edge = self._tw.chars_on_current_line + self._PROGRESS_LENGTH + 1 >= self._screen_width
-        if past_edge:
-            msg = self._get_progress_information_message()
-            self._write(msg + '\n', cyan=True)
-
-    _PROGRESS_LENGTH = len(' [100%]')
-
-    def _get_progress_information_message(self):
-        collected = self._session.testscollected
-        if collected:
-            progress = self._progress_items_reported * 100 // collected
-            return ' [{:3d}%]'.format(progress)
-        return ' [100%]'
-
-    def _write_progress_information_filling_space(self):
-        if not self._show_progress_info:
-            return
-        msg = self._get_progress_information_message()
-        fill = ' ' * (self._tw.fullwidth - self._tw.chars_on_current_line - len(msg) - 1)
-        self.write(fill + msg, cyan=True)
-
     def pytest_collection(self):
         if not self.isatty and self._is_verbose():
             self.write(self.language.get_collecting() + " ...", bold=True)
-
-    def _is_verbose(self):
-        return self.verbosity >= TerminalVerbose.verbose.value
-
-    def _is_quiet(self):
-        return self.verbosity == TerminalVerbose.quiet.value
-
-    def _is_more_quiet(self):
-        return self.verbosity < TerminalVerbose.quiet.value
-
-    def _has_default_verbosity(self):
-        return self.verbosity == TerminalVerbose.default.value
-
-    def _showheader(self):
-        return self._has_default_verbosity() or self._is_verbose()
-
 
     def pytest_collectreport(self, report):
         if report.failed:
@@ -416,30 +295,6 @@ class TerminalReporter:
         if self.isatty:
             # self.write_fspath_result(report.nodeid, 'E')
             self.report_collect()
-
-    def report_collect(self, final=False):
-        if self._is_quiet():
-            return
-
-        errors = len(self.stats.get('error', []))
-        skipped = len(self.stats.get('skipped', []))
-        if final:
-            line = self.language.get_collected() + " "
-        else:
-            line = self.language.get_collecting() + " "
-
-        line += str(self._numcollected) + " " + (
-            self.language.get_item() if self._numcollected == 1 else self.language.get_item_plural())
-        if errors:
-            line += " / %d %s" % (errors, self.language.get_errors_lower())
-        if skipped:
-            line += " / %d %s" % (skipped, self.language.get_skipped_lower())
-        if self.isatty:
-            self.rewrite(line, bold=True, erase=True)
-            if final:
-                self.write('\n')
-        else:
-            self.write_line(line)
 
     def pytest_collection_modifyitems(self):
         self.report_collect(True)
@@ -469,11 +324,6 @@ class TerminalReporter:
             config=self.config, startdir=self.startdir)
         self._write_report_lines_from_hooks(lines)
 
-    def _write_report_lines_from_hooks(self, lines):
-        lines.reverse()
-        for line in flatten(lines):
-            self.write_line(line)
-
     def pytest_report_header(self, config):
         inifile = ""
         if config.inifile:
@@ -499,37 +349,6 @@ class TerminalReporter:
         lines = self.config.hook.pytest_report_collectionfinish(
             config=self.config, startdir=self.startdir, items=session.items)
         self._write_report_lines_from_hooks(lines)
-
-    def _printcollecteditems(self, items):
-        # to print out items and their parent collectors
-        # we take care to leave out Instances aka ()
-        # because later versions are going to get rid of them anyway
-
-        if self._is_more_quiet():
-            counts = {}
-            for item in items:
-                name = item.nodeid.split('::', 1)[0]
-                counts[name] = counts.get(name, 0) + 1
-            for name, count in sorted(counts.items()):
-                self._write_line("%s: %d" % (name, count))
-
-        elif self._is_quiet():
-            for item in items:
-                nodeid = item.nodeid
-                nodeid = nodeid.replace("::()::", "::")
-                self._write_line(nodeid)
-        else:
-            stack = []
-            for item in items:
-                needed_collectors = item.listchain()[1:]  # strip root node
-                while stack:
-                    if stack == needed_collectors[:len(stack)]:
-                        break
-                    stack.pop()
-                for col in needed_collectors[len(stack):]:
-                    stack.append(col)
-                    indent = (len(stack) - 1) * "  "
-                    self._write_line("%s%s" % (indent, col))
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_sessionfinish(self, exitstatus):
@@ -559,43 +378,6 @@ class TerminalReporter:
         if hasattr(self, '_keyboardinterrupt_memo'):
             self._report_keyboardinterrupt()
 
-    def _report_keyboardinterrupt(self):
-        excrepr = self._keyboardinterrupt_memo
-        msg = excrepr.reprcrash.message
-        self.write_sep("!", msg)
-        if "KeyboardInterrupt" in msg:
-            if self.config.option.fulltrace:
-                excrepr.toterminal(self._tw)
-            else:
-                self._write_line(self.language.get_show_traceback_instructions(), yellow=True)
-                excrepr.reprcrash.toterminal(self._tw)
-
-    def _locationline(self, nodeid, fspath, lineno, domain):
-        def mkrel(nodeid):
-            line = self.config.cwd_relative_nodeid(nodeid)
-            if domain and line.endswith(domain):
-                line = line[:-len(domain)]
-                values = domain.split("[")
-                values[0] = values[0].replace('.', '::')  # don't replace '.' in params
-                line += "[".join(values)
-            return line
-        # collect_fspath comes from testid which has a "/"-normalized path
-
-        if fspath:
-            res = mkrel(nodeid).replace("::()", "")  # parens-normalization
-            if nodeid.split("::")[0] != fspath.replace("\\", nodes.SEP):
-                res += " <- " + self.startdir.bestrelpath(fspath)
-        else:
-            res = "[location]"
-        return res + " "
-
-    def _getfailureheadline(self, rep):
-        if hasattr(rep, 'location'):
-            fspath, lineno, domain = rep.location
-            return domain
-        else:
-            return self.language.get_test_session()  # XXX?
-
     #
     # summaries for sessionfinish
     #
@@ -612,11 +394,13 @@ class TerminalReporter:
             if not all_warnings:
                 return
 
-            grouped = itertools.groupby(all_warnings, key=lambda wr: wr.get_location(self.config))
+            grouped = itertools.groupby(all_warnings,
+                                        key=lambda wr: wr.get_location(self.config))
 
             self.write_sep("=", self.language.get_warnings_summary(), yellow=True, bold=False)
             for location, warning_records in grouped:
-                self._write_line(str(location) or '<%s>' % self.language.get_undetermined_location())
+                self._write_line(
+                    str(location) or '<%s>' % self.language.get_undetermined_location())
                 for w in warning_records:
                     lines = w.message.splitlines()
                     indented = '\n'.join('  ' + x for x in lines)
@@ -643,6 +427,30 @@ class TerminalReporter:
                 if content[-1:] == "\n":
                     content = content[:-1]
                 self._write_line(content)
+
+    def report_collect(self, final=False):
+        if self._is_quiet():
+            return
+
+        errors = len(self.stats.get('error', []))
+        skipped = len(self.stats.get('skipped', []))
+        if final:
+            line = self.language.get_collected() + " "
+        else:
+            line = self.language.get_collecting() + " "
+
+        line += str(self._numcollected) + " " + (
+            self.language.get_item() if self._numcollected == 1 else self.language.get_item_plural())
+        if errors:
+            line += " / %d %s" % (errors, self.language.get_errors_lower())
+        if skipped:
+            line += " / %d %s" % (skipped, self.language.get_skipped_lower())
+        if self.isatty:
+            self.rewrite(line, bold=True, erase=True)
+            if final:
+                self.write('\n')
+        else:
+            self.write_line(line)
 
     def summary_failures(self):
         if self.config.option.tbstyle != "no":
@@ -681,14 +489,6 @@ class TerminalReporter:
                 self.write_sep("_", msg)
                 self._outrep_summary(rep)
 
-    def _outrep_summary(self, rep):
-        rep.toterminal(self._tw)
-        for secname, content in rep.sections:
-            self._tw.sep("-", secname)
-            if content[-1:] == "\n":
-                content = content[:-1]
-            self._write_line(content)
-
     def summary_stats(self):
         session_duration = time.time() - self._sessionstarttime
         (line, color) = build_summary_stats_line(self.stats, self.language.get_summary_stats_translations(),
@@ -708,6 +508,209 @@ class TerminalReporter:
                 self.language.get_tests_deselected()
             ), bold=True)
 
+    def write(self, content, **markup):
+        self._write(content, **markup)
+
+    def write_line(self, line, **markup):
+        if not isinstance(line, six.text_type):
+            line = six.text_type(line, errors="replace")
+        self._ensure_newline()
+        self._write_line(line, **markup)
+
+    def rewrite(self, line, **markup):
+        """
+        Rewinds the terminal cursor to the beginning and writes the given line.
+
+        :kwarg erase: if True, will also add spaces until the full terminal width to ensure
+            previous lines are properly erased.
+
+        The rest of the keyword arguments are markup instructions.
+        """
+        erase = markup.pop('erase', False)
+        if erase:
+            fill_count = self._tw.fullwidth - len(line) - 1
+            fill = ' ' * fill_count
+        else:
+            fill = ''
+        line = str(line)
+        self._write("\r" + line + fill, **markup)
+
+    def write_sep(self, sep, title=None, **markup):
+        self._ensure_newline()
+        self._tw.sep(sep, title, **markup)
+
+    def section(self, title, sep="=", **kw):
+        self._tw.sep(sep, title, **kw)
+
+    def line(self, msg, **kw):
+        self._write_line(msg, **kw)
+
+    def _printcollecteditems(self, items):
+        # to print out items and their parent collectors
+        # we take care to leave out Instances aka ()
+        # because later versions are going to get rid of them anyway
+
+        if self._is_more_quiet():
+            counts = {}
+            for item in items:
+                name = item.nodeid.split('::', 1)[0]
+                counts[name] = counts.get(name, 0) + 1
+            for name, count in sorted(counts.items()):
+                self._write_line("%s: %d" % (name, count))
+
+        elif self._is_quiet():
+            for item in items:
+                nodeid = item.nodeid
+                nodeid = nodeid.replace("::()::", "::")
+                self._write_line(nodeid)
+        else:
+            stack = []
+            for item in items:
+                needed_collectors = item.listchain()[1:]  # strip root node
+                while stack:
+                    if stack == needed_collectors[:len(stack)]:
+                        break
+                    stack.pop()
+                for col in needed_collectors[len(stack):]:
+                    stack.append(col)
+                    indent = (len(stack) - 1) * "  "
+                    self._write_line("%s%s" % (indent, col))
+
+    def _report_keyboardinterrupt(self):
+        excrepr = self._keyboardinterrupt_memo
+        msg = excrepr.reprcrash.message
+        self.write_sep("!", msg)
+        if "KeyboardInterrupt" in msg:
+            if self.config.option.fulltrace:
+                excrepr.toterminal(self._tw)
+            else:
+                self._write_line(self.language.get_show_traceback_instructions(), yellow=True)
+                excrepr.reprcrash.toterminal(self._tw)
+
+    def _locationline(self, nodeid, fspath, lineno, domain):
+        def mkrel(nodeid):
+            line = self.config.cwd_relative_nodeid(nodeid)
+            if domain and line.endswith(domain):
+                line = line[:-len(domain)]
+                values = domain.split("[")
+                values[0] = values[0].replace('.', '::')  # don't replace '.' in params
+                line += "[".join(values)
+            return line
+        # collect_fspath comes from testid which has a "/"-normalized path
+
+        if fspath:
+            res = mkrel(nodeid).replace("::()", "")  # parens-normalization
+            if nodeid.split("::")[0] != fspath.replace("\\", nodes.SEP):
+                res += " <- " + self.startdir.bestrelpath(fspath)
+        else:
+            res = "[location]"
+        return res + " "
+
+    def _getfailureheadline(self, rep):
+        if hasattr(rep, 'location'):
+            fspath, lineno, domain = rep.location
+            return domain
+        else:
+            return self.language.get_test_session()  # XXX?
+
+    def _write_report_lines_from_hooks(self, lines):
+        lines.reverse()
+        for line in flatten(lines):
+            self.write_line(line)
+
+    def _outrep_summary(self, rep):
+        rep.toterminal(self._tw)
+        for secname, content in rep.sections:
+            self._tw.sep("-", secname)
+            if content[-1:] == "\n":
+                content = content[:-1]
+            self._write_line(content)
+
+
+    # todo should these verbosity checkers be moved to a mixin?
+    def _is_verbose(self):
+        return self.verbosity >= TerminalVerbose.verbose.value
+
+    def _is_quiet(self):
+        return self.verbosity == TerminalVerbose.quiet.value
+
+    def _is_more_quiet(self):
+        return self.verbosity < TerminalVerbose.quiet.value
+
+    def _has_default_verbosity(self):
+        return self.verbosity == TerminalVerbose.default.value
+
+    def _showheader(self):
+        return self._has_default_verbosity() or self._is_verbose()
+
+    def _write_progress_if_past_edge(self):
+        if not self._show_progress_info:
+            return
+        last_item = self._progress_items_reported == self._session.testscollected
+        if last_item:
+            self._write_progress_information_filling_space()
+            return
+
+        past_edge = self._tw.chars_on_current_line + self._PROGRESS_LENGTH + 1 >= self._screen_width
+        if past_edge:
+            msg = self._get_progress_information_message()
+            self._write(msg + '\n', cyan=True)
+
+    def _get_progress_information_message(self):
+        collected = self._session.testscollected
+        if collected:
+            progress = self._progress_items_reported * 100 // collected
+            return ' [{:3d}%]'.format(progress)
+        return ' [100%]'
+
+    def _write_progress_information_filling_space(self):
+        if not self._show_progress_info:
+            return
+        msg = self._get_progress_information_message()
+        fill = ' ' * (self._tw.fullwidth - self._tw.chars_on_current_line - len(msg) - 1)
+        self.write(fill + msg, cyan=True)
+
+    def _show_long_test_info(self):
+        return self._is_verbose()
+
+    def _show_fs_path(self):
+        return self._has_default_verbosity() or self._is_verbose()
+
+    def _write(self, *args, **kwargs):
+        self._tw.write(*args, **kwargs)
+
+    def hasopt(self, char):
+        char = {'xfailed': 'x', 'skipped': 's'}.get(char, char)
+        return char in self.reportchars
+
+    def write_fspath_result(self, nodeid, res):
+        fspath = self.config.rootdir.join(nodeid.split("::")[0])
+        if fspath != self.currentfspath:
+            if self.currentfspath is not None:
+                self._write_progress_information_filling_space()
+            self.currentfspath = fspath
+            fspath = self.startdir.bestrelpath(fspath)
+            self._write_line()
+            self._write(fspath + " ")
+        self._write(res)
+
+    def _write_line(self, *args, **kwargs):
+        self._tw.line(*args, **kwargs)
+
+    def _write_ensure_prefix(self, prefix, extra="", **kwargs):
+        if self.currentfspath != prefix:
+            self._write_line()
+            self.currentfspath = prefix
+            self._write(prefix)
+        if extra:
+            self._write(extra, **kwargs)
+            self.currentfspath = -2
+            self._write_progress_information_filling_space()
+
+    def _ensure_newline(self):
+        if self.currentfspath:
+            self._write_line()
+            self.currentfspath = None
 
 def repr_pythonversion(v=None):
     if v is None:
