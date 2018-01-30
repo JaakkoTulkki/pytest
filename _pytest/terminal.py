@@ -8,7 +8,6 @@ import itertools
 import platform
 import sys
 import time
-from enum import Enum
 
 import pluggy
 import py
@@ -16,16 +15,11 @@ import six
 
 import pytest
 from _pytest import nodes
+from ._terminal.mixins import VerbosityMixin
 from _pytest.main import EXIT_OK, EXIT_TESTSFAILED, EXIT_INTERRUPTED, \
     EXIT_USAGEERROR, EXIT_NOTESTSCOLLECTED
 from _pytest.spanish import Spanish
 from _pytest.english import English
-
-
-class TerminalVerbose(Enum):
-    quiet = -1
-    default = 0
-    verbose = 1
 
 
 def pytest_addoption(parser):
@@ -177,7 +171,7 @@ def get_language(config):
     return English()
 
 
-class TerminalReporter:
+class TerminalReporter(VerbosityMixin):
 
     _PROGRESS_LENGTH = len(' [100%]')
 
@@ -626,19 +620,6 @@ class TerminalReporter:
                 content = content[:-1]
             self._write_line(content)
 
-
-    # todo should these verbosity checkers be moved to a mixin?
-    def _is_verbose(self):
-        return self.verbosity >= TerminalVerbose.verbose.value
-
-    def _is_quiet(self):
-        return self.verbosity == TerminalVerbose.quiet.value
-
-    def _is_more_quiet(self):
-        return self.verbosity < TerminalVerbose.quiet.value
-
-    def _has_default_verbosity(self):
-        return self.verbosity == TerminalVerbose.default.value
 
     def _showheader(self):
         return self._has_default_verbosity() or self._is_verbose()
