@@ -15,7 +15,7 @@ import six
 
 import pytest
 from _pytest import nodes
-from ._terminal.mixins import VerbosityMixin
+from ._terminal.mixins import VerbosityMixin, WriterMixin
 from _pytest.main import EXIT_OK, EXIT_TESTSFAILED, EXIT_INTERRUPTED, \
     EXIT_USAGEERROR, EXIT_NOTESTSCOLLECTED
 from _pytest.spanish import Spanish
@@ -171,7 +171,7 @@ def get_language(config):
     return English()
 
 
-class TerminalReporter(VerbosityMixin):
+class TerminalReporter(VerbosityMixin, WriterMixin):
 
     _PROGRESS_LENGTH = len(' [100%]')
 
@@ -502,37 +502,6 @@ class TerminalReporter(VerbosityMixin):
                 self.language.get_tests_deselected()
             ), bold=True)
 
-    def write(self, content, **markup):
-        self._write(content, **markup)
-
-    def write_line(self, line, **markup):
-        if not isinstance(line, six.text_type):
-            line = six.text_type(line, errors="replace")
-        self._ensure_newline()
-        self._write_line(line, **markup)
-
-    def rewrite(self, line, **markup):
-        """
-        Rewinds the terminal cursor to the beginning and writes the given line.
-
-        :kwarg erase: if True, will also add spaces until the full terminal width to ensure
-            previous lines are properly erased.
-
-        The rest of the keyword arguments are markup instructions.
-        """
-        erase = markup.pop('erase', False)
-        if erase:
-            fill_count = self._tw.fullwidth - len(line) - 1
-            fill = ' ' * fill_count
-        else:
-            fill = ''
-        line = str(line)
-        self._write("\r" + line + fill, **markup)
-
-    def write_sep(self, sep, title=None, **markup):
-        self._ensure_newline()
-        self._tw.sep(sep, title, **markup)
-
     def section(self, title, sep="=", **kw):
         self._tw.sep(sep, title, **kw)
 
@@ -657,8 +626,6 @@ class TerminalReporter(VerbosityMixin):
     def _show_fs_path(self):
         return self._has_default_verbosity() or self._is_verbose()
 
-    def _write(self, *args, **kwargs):
-        self._tw.write(*args, **kwargs)
 
     def hasopt(self, char):
         char = {'xfailed': 'x', 'skipped': 's'}.get(char, char)
@@ -675,9 +642,6 @@ class TerminalReporter(VerbosityMixin):
             self._write(fspath + " ")
         self._write(res)
 
-    def _write_line(self, *args, **kwargs):
-        self._tw.line(*args, **kwargs)
-
     def _write_ensure_prefix(self, prefix, extra="", **kwargs):
         if self.currentfspath != prefix:
             self._write_line()
@@ -687,6 +651,10 @@ class TerminalReporter(VerbosityMixin):
             self._write(extra, **kwargs)
             self.currentfspath = -2
             self._write_progress_information_filling_space()
+
+    def write_sep(self, sep, title=None, **markup):
+        self._ensure_newline()
+        self._tw.sep(sep, title, **markup)
 
     def _ensure_newline(self):
         if self.currentfspath:
