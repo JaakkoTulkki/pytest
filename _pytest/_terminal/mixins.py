@@ -25,43 +25,11 @@ class VerbosityMixin(object):
     def _has_default_verbosity(self):
         return self.verbosity == TerminalVerbose.default.value
 
+    def _showheader(self):
+        return self._has_default_verbosity() or self._is_verbose()
 
-class WriterMixin(object):
-    _tw = None
+    def _show_long_test_info(self):
+        return self._is_verbose()
 
-    def write(self, content, **markup):
-        self._write(content, **markup)
-
-    def write_line(self, line, **markup):
-        if not isinstance(line, six.text_type):
-            line = six.text_type(line, errors="replace")
-        self._ensure_newline()
-        self._write_line(line, **markup)
-
-    def rewrite(self, line, **markup):
-        """
-        Rewinds the terminal cursor to the beginning and writes the given line.
-
-        :kwarg erase: if True, will also add spaces until the full terminal width to ensure
-            previous lines are properly erased.
-
-        The rest of the keyword arguments are markup instructions.
-        """
-        erase = markup.pop('erase', False)
-        if erase:
-            fill_count = self._tw.fullwidth - len(line) - 1
-            fill = ' ' * fill_count
-        else:
-            fill = ''
-        line = str(line)
-        self._write("\r" + line + fill, **markup)
-
-
-
-    def _write(self, *args, **kwargs):
-        self._tw.write(*args, **kwargs)
-
-
-
-    def _write_line(self, *args, **kwargs):
-        self._tw.line(*args, **kwargs)
+    def _show_fs_path(self):
+        return self._has_default_verbosity() or self._is_verbose()

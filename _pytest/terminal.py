@@ -15,7 +15,8 @@ import six
 
 import pytest
 from _pytest import nodes
-from ._terminal.mixins import VerbosityMixin, WriterMixin
+from ._terminal.mixins import VerbosityMixin
+from ._terminal.terminal_writer import TerminalWriter
 from _pytest.main import EXIT_OK, EXIT_TESTSFAILED, EXIT_INTERRUPTED, \
     EXIT_USAGEERROR, EXIT_NOTESTSCOLLECTED
 from _pytest.spanish import Spanish
@@ -171,10 +172,7 @@ def get_language(config):
     return English()
 
 
-class TerminalReporter(VerbosityMixin, WriterMixin):
-
-    _PROGRESS_LENGTH = len(' [100%]')
-
+class TerminalReporter(VerbosityMixin, TerminalWriter):
     def __init__(self, config, file=None, language=None):
         import _pytest.config
         self.language = get_language(config) if language is None else language()
@@ -414,14 +412,6 @@ class TerminalReporter(VerbosityMixin, WriterMixin):
                     self.write_sep("_", msg)
                     self._outrep_summary(rep)
 
-    def print_teardown_sections(self, rep):
-        for secname, content in rep.sections:
-            if 'teardown' in secname:
-                self._tw.sep('-', secname)
-                if content[-1:] == "\n":
-                    content = content[:-1]
-                self._write_line(content)
-
     def report_collect(self, final=False):
         if self._is_quiet():
             return
@@ -501,12 +491,6 @@ class TerminalReporter(VerbosityMixin, WriterMixin):
                 len(self.stats['deselected']),
                 self.language.get_tests_deselected()
             ), bold=True)
-
-    def section(self, title, sep="=", **kw):
-        self._tw.sep(sep, title, **kw)
-
-    def line(self, msg, **kw):
-        self._write_line(msg, **kw)
 
     def _printcollecteditems(self, items):
         # to print out items and their parent collectors
@@ -589,77 +573,11 @@ class TerminalReporter(VerbosityMixin, WriterMixin):
                 content = content[:-1]
             self._write_line(content)
 
-
-    def _showheader(self):
-        return self._has_default_verbosity() or self._is_verbose()
-
-    def _write_progress_if_past_edge(self):
-        if not self._show_progress_info:
-            return
-        last_item = self._progress_items_reported == self._session.testscollected
-        if last_item:
-            self._write_progress_information_filling_space()
-            return
-
-        past_edge = self._tw.chars_on_current_line + self._PROGRESS_LENGTH + 1 >= self._screen_width
-        if past_edge:
-            msg = self._get_progress_information_message()
-            self._write(msg + '\n', cyan=True)
-
-    def _get_progress_information_message(self):
-        collected = self._session.testscollected
-        if collected:
-            progress = self._progress_items_reported * 100 // collected
-            return ' [{:3d}%]'.format(progress)
-        return ' [100%]'
-
-    def _write_progress_information_filling_space(self):
-        if not self._show_progress_info:
-            return
-        msg = self._get_progress_information_message()
-        fill = ' ' * (self._tw.fullwidth - self._tw.chars_on_current_line - len(msg) - 1)
-        self.write(fill + msg, cyan=True)
-
-    def _show_long_test_info(self):
-        return self._is_verbose()
-
-    def _show_fs_path(self):
-        return self._has_default_verbosity() or self._is_verbose()
-
-
     def hasopt(self, char):
         char = {'xfailed': 'x', 'skipped': 's'}.get(char, char)
         return char in self.reportchars
 
-    def write_fspath_result(self, nodeid, res):
-        fspath = self.config.rootdir.join(nodeid.split("::")[0])
-        if fspath != self.currentfspath:
-            if self.currentfspath is not None:
-                self._write_progress_information_filling_space()
-            self.currentfspath = fspath
-            fspath = self.startdir.bestrelpath(fspath)
-            self._write_line()
-            self._write(fspath + " ")
-        self._write(res)
 
-    def _write_ensure_prefix(self, prefix, extra="", **kwargs):
-        if self.currentfspath != prefix:
-            self._write_line()
-            self.currentfspath = prefix
-            self._write(prefix)
-        if extra:
-            self._write(extra, **kwargs)
-            self.currentfspath = -2
-            self._write_progress_information_filling_space()
-
-    def write_sep(self, sep, title=None, **markup):
-        self._ensure_newline()
-        self._tw.sep(sep, title, **markup)
-
-    def _ensure_newline(self):
-        if self.currentfspath:
-            self._write_line()
-            self.currentfspath = None
 
 def repr_pythonversion(v=None):
     if v is None:
