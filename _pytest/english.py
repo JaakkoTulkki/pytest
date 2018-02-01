@@ -2,6 +2,9 @@ from .language import Language
 
 
 class English(Language):
+    def get_skipped_summary_header(self):
+        return 'short test summary info'
+
     def get_summary_stats(self, line, session_duration):
         return "%s in %.2f %s" % (line, session_duration, self.get_seconds())
 

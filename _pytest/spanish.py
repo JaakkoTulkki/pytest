@@ -4,6 +4,9 @@ from .language import Language
 
 
 class Spanish(Language):
+    def get_skipped_summary_header(self):
+        return 'resumen breve de pruebas'
+
     def get_summary_stats(self, line, session_duration):
         return "%s en %.2f %s" % (line, session_duration, self.get_seconds())
 

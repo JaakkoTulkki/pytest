@@ -128,3 +128,7 @@ class Language(object):
             return a correct translation for this
         """
         raise NotImplementedError('Not implemented')
+
+    @abstractmethod
+    def get_skipped_summary_header(self):
+        raise NotImplementedError('Not implemented')

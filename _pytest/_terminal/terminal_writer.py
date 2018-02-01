@@ -15,10 +15,11 @@ class TerminalWriter(object):
     def write(self, content, **markup):
         self._write(content, **markup)
 
-    def write_line(self, line, **markup):
+    def write_line(self, line, ensure_newline=True, **markup):
         if not isinstance(line, six.text_type):
             line = six.text_type(line, errors="replace")
-        self._ensure_newline()
+        if ensure_newline:
+            self._ensure_newline()
         self._write_line(line, **markup)
 
     def rewrite(self, line, **markup):
@@ -117,3 +118,6 @@ class TerminalWriter(object):
                 if content[-1:] == "\n":
                     content = content[:-1]
                 self._write_line(content)
+
+    def write_skipped_summary_info(self):
+        self._tw.sep("=", self.language.get_skipped_summary_header())

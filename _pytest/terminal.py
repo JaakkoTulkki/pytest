@@ -99,7 +99,6 @@ def getreportopt(config):
 
 def getcrashline(rep):
     """
-    this was moved here. Self not used. Second, want to make this more testable
     :param rep: _pytest.runner.TestReport
     :return: crashline
     """
@@ -143,7 +142,7 @@ class TerminalReporter(VerbosityMixin, TerminalWriter):
         import _pytest.config
         self.language = get_language(config) if language is None else language()
         self.config = config
-        self.verbosity = self.config.option.verbose
+        self.verbosity = self.config.getoption('verbose')
         self._numcollected = 0
         self._session = None
 

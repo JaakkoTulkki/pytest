@@ -308,9 +308,10 @@ def pytest_terminal_summary(terminalreporter):
             show_simple(terminalreporter, lines, 'passed', "PASSED %s")
 
     if lines:
-        tr._tw.sep("=", "short test summary info")
+        # todo this into function
+        tr.write_skipped_summary_info()
         for line in lines:
-            tr._tw.line(line)
+            tr.write_line(line, ensure_newline=False)
 
 
 def show_simple(terminalreporter, lines, stat, format):
