@@ -121,3 +121,44 @@ class TerminalWriter(object):
 
     def write_skipped_summary_info(self):
         self._tw.sep("=", self.language.get_skipped_summary_header())
+
+    def _printcollecteditems(self, items):
+        # to print out items and their parent collectors
+        # we take care to leave out Instances aka ()
+        # because later versions are going to get rid of them anyway
+
+        if self._is_more_quiet():
+            counts = {}
+            for item in items:
+                name = item.nodeid.split('::', 1)[0]
+                counts[name] = counts.get(name, 0) + 1
+            for name, count in sorted(counts.items()):
+                self._write_line("%s: %d" % (name, count))
+
+        elif self._is_quiet():
+            for item in items:
+                nodeid = item.nodeid
+                nodeid = nodeid.replace("::()::", "::")
+                self._write_line(nodeid)
+        else:
+            stack = []
+            for item in items:
+                needed_collectors = item.listchain()[1:]  # strip root node
+                while stack:
+                    if stack == needed_collectors[:len(stack)]:
+                        break
+                    stack.pop()
+                for col in needed_collectors[len(stack):]:
+                    stack.append(col)
+                    indent = (len(stack) - 1) * "  "
+                    self._write_line("%s%s" % (indent, col))
+
+    def _report_keyboardinterrupt(self, _keyboardinterrupt_memo):
+        msg = _keyboardinterrupt_memo.reprcrash.message
+        self.write_sep("!", msg)
+        if "KeyboardInterrupt" in msg:
+            if self.config.option.fulltrace:
+                _keyboardinterrupt_memo.toterminal(self._tw)
+            else:
+                self._write_line(self.language.get_show_traceback_instructions(), yellow=True)
+                _keyboardinterrupt_memo.reprcrash.toterminal(self._tw)

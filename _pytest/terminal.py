@@ -323,7 +323,7 @@ class TerminalReporter(VerbosityMixin, TerminalWriter):
             self.summary_warnings()
             self.summary_passes()
         if exitstatus == EXIT_INTERRUPTED:
-            self._report_keyboardinterrupt()
+            self._report_keyboardinterrupt(self._keyboardinterrupt_memo)
             del self._keyboardinterrupt_memo
         self.summary_deselected()
         self.summary_stats()
@@ -333,7 +333,7 @@ class TerminalReporter(VerbosityMixin, TerminalWriter):
 
     def pytest_unconfigure(self):
         if hasattr(self, '_keyboardinterrupt_memo'):
-            self._report_keyboardinterrupt()
+            self._report_keyboardinterrupt(self._keyboardinterrupt_memo)
 
     #
     # summaries for sessionfinish
@@ -456,48 +456,6 @@ class TerminalReporter(VerbosityMixin, TerminalWriter):
                 len(self.stats['deselected']),
                 self.language.get_tests_deselected()
             ), bold=True)
-
-    def _printcollecteditems(self, items):
-        # to print out items and their parent collectors
-        # we take care to leave out Instances aka ()
-        # because later versions are going to get rid of them anyway
-
-        if self._is_more_quiet():
-            counts = {}
-            for item in items:
-                name = item.nodeid.split('::', 1)[0]
-                counts[name] = counts.get(name, 0) + 1
-            for name, count in sorted(counts.items()):
-                self._write_line("%s: %d" % (name, count))
-
-        elif self._is_quiet():
-            for item in items:
-                nodeid = item.nodeid
-                nodeid = nodeid.replace("::()::", "::")
-                self._write_line(nodeid)
-        else:
-            stack = []
-            for item in items:
-                needed_collectors = item.listchain()[1:]  # strip root node
-                while stack:
-                    if stack == needed_collectors[:len(stack)]:
-                        break
-                    stack.pop()
-                for col in needed_collectors[len(stack):]:
-                    stack.append(col)
-                    indent = (len(stack) - 1) * "  "
-                    self._write_line("%s%s" % (indent, col))
-
-    def _report_keyboardinterrupt(self):
-        excrepr = self._keyboardinterrupt_memo
-        msg = excrepr.reprcrash.message
-        self.write_sep("!", msg)
-        if "KeyboardInterrupt" in msg:
-            if self.config.option.fulltrace:
-                excrepr.toterminal(self._tw)
-            else:
-                self._write_line(self.language.get_show_traceback_instructions(), yellow=True)
-                excrepr.reprcrash.toterminal(self._tw)
 
     def _locationline(self, nodeid, fspath, lineno, domain):
         def mkrel(nodeid):
