@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
 
+import six
 
 class TerminalWriter(object):
     _PROGRESS_LENGTH = len(' [100%]')

@@ -2,7 +2,7 @@
 from __future__ import absolute_import, unicode_literals
 
 from enum import Enum
-import six
+
 
 class TerminalVerbose(Enum):
     quiet = -1

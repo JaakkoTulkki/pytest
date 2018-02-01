@@ -17,6 +17,7 @@ import pytest
 from _pytest import nodes
 from ._terminal.mixins import VerbosityMixin
 from ._terminal.terminal_writer import TerminalWriter
+from ._terminal.warning_report import WarningReport
 from _pytest.main import EXIT_OK, EXIT_TESTSFAILED, EXIT_INTERRUPTED, \
     EXIT_USAGEERROR, EXIT_NOTESTSCOLLECTED
 from _pytest.spanish import Spanish
