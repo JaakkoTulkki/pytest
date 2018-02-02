@@ -1,7 +1,8 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-s
 from __future__ import absolute_import, unicode_literals
 
 import six
+
 
 class TerminalWriter(object):
     _PROGRESS_LENGTH = len(' [100%]')
@@ -37,8 +38,9 @@ class TerminalWriter(object):
             fill = ' ' * fill_count
         else:
             fill = ''
-        line = str(line)
-        self._write("\r" + line + fill, **markup)
+        line = line.encode('utf-8')
+        fill = fill.encode('utf-8')
+        self._write("\r".encode('utf-8') +line + fill, **markup)
 
 
     def section(self, title, sep="=", **kw):

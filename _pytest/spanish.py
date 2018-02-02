@@ -14,7 +14,8 @@ class Spanish(Language):
         return {
             'skipped': 'omitido',
             'passed': 'pasado',
-            'failed': 'fallado'
+            'failed': 'fallado',
+            'error': 'fallado',
         }[result]
 
     def get_seconds(self):

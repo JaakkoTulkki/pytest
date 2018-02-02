@@ -137,12 +137,16 @@ def _update_current_test_var(item, when):
         os.environ.pop(var_name)
 
 
-def pytest_report_teststatus(report):
+def pytest_report_teststatus(report, language):
     if report.when in ("setup", "teardown"):
         if report.failed:
             #      category, shortletter, verbose-word
+            if language is not None:
+                return "error", "E", language.get_test_result_translation('error').upper()
             return "error", "E", "ERROR"
         elif report.skipped:
+            if language is not None:
+                return "skipped", "s", language.get_test_result_translation('skipped').upper()
             return "skipped", "s", "SKIPPED"
         else:
             return "", "", ""
