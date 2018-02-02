@@ -51,7 +51,7 @@ def build_summary_stats_line(stats, translation_table=None, no_tests_ran='no tes
     return (line, color)
 
 
-class TerminalSummary(object):
+class TerminalSummaryMixin(object):
 
     def summary_warnings(self):
         if self.hasopt("w"):

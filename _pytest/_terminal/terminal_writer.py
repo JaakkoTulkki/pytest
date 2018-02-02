@@ -12,7 +12,7 @@ def flatten(values):
         else:
             yield x
 
-class TerminalWriter(object):
+class TerminalWriterMixin(object):
     _PROGRESS_LENGTH = len(' [100%]')
     _tw = None
     _session = None

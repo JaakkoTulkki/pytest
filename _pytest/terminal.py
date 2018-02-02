@@ -18,10 +18,10 @@ from _pytest.english import English
 from _pytest.main import EXIT_OK, EXIT_TESTSFAILED, EXIT_INTERRUPTED, \
     EXIT_USAGEERROR, EXIT_NOTESTSCOLLECTED
 from _pytest.spanish import Spanish
-from ._terminal.mixins import VerbosityMixin
-from ._terminal.terminal_writer import TerminalWriter
+from ._terminal.terminal_verbosity import VerbosityMixin
+from ._terminal.terminal_writer import TerminalWriterMixin
 from ._terminal.warning_report import WarningReport
-from ._terminal.terminal_summary import TerminalSummary
+from ._terminal.terminal_summary import TerminalSummaryMixin
 
 
 def pytest_addoption(parser):
@@ -123,7 +123,7 @@ def get_language(config):
     return English()
 
 
-class TerminalReporter(VerbosityMixin, TerminalWriter, TerminalSummary):
+class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin):
     def __init__(self, config, file=None, language=None):
         import _pytest.config
         self.language = get_language(config) if language is None else language()
