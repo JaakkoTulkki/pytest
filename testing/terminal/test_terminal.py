@@ -15,8 +15,9 @@ import _pytest._code
 import py
 import pytest
 from _pytest.main import EXIT_NOTESTSCOLLECTED
-from _pytest.terminal import TerminalReporter, repr_pythonversion, getreportopt, getcrashline
-from _pytest.terminal import build_summary_stats_line, _plugin_nameversions, mywriter, get_pypy_version_message
+from _pytest.terminal import TerminalReporter, repr_pythonversion, getreportopt
+from _pytest.terminal import _plugin_nameversions, mywriter, get_pypy_version_message
+from _pytest._terminal.terminal_summary import build_summary_stats_line, getcrashline
 
 
 DistInfo = collections.namedtuple('DistInfo', ['project_name', 'version'])

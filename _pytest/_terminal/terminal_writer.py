@@ -4,6 +4,14 @@ from __future__ import absolute_import, unicode_literals
 import six
 
 
+def flatten(values):
+    for x in values:
+        if isinstance(x, (list, tuple)):
+            for y in flatten(x):
+                yield y
+        else:
+            yield x
+
 class TerminalWriter(object):
     _PROGRESS_LENGTH = len(' [100%]')
     _tw = None
@@ -38,9 +46,12 @@ class TerminalWriter(object):
             fill = ' ' * fill_count
         else:
             fill = ''
-        line = line.encode('utf-8')
-        fill = fill.encode('utf-8')
-        self._write("\r".encode('utf-8') +line + fill, **markup)
+        # line = line.encode('utf-8')
+        # fill = fill.encode('utf-8')
+        self._write("\r" + str(line) + str(fill), **markup)
+        # line = line.encode('utf-8')
+        # fill = fill.encode('utf-8')
+        # self._write("\r" + line + fill, **markup)
 
 
     def section(self, title, sep="=", **kw):
@@ -164,3 +175,8 @@ class TerminalWriter(object):
             else:
                 self._write_line(self.language.get_show_traceback_instructions(), yellow=True)
                 _keyboardinterrupt_memo.reprcrash.toterminal(self._tw)
+
+    def _write_report_lines_from_hooks(self, lines):
+        lines.reverse()
+        for line in flatten(lines):
+            self.write_line(line)

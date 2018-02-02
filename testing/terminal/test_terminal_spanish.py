@@ -7,7 +7,8 @@ import py
 
 import _pytest
 import pytest
-from _pytest.terminal import TerminalReporter, build_summary_stats_line
+from _pytest.terminal import TerminalReporter
+from _pytest._terminal.terminal_summary import build_summary_stats_line
 from _pytest.spanish import Spanish
 
 
