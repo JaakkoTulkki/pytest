@@ -186,10 +186,19 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
         rep = report
         res = self.config.hook.pytest_report_teststatus(report=rep, language=self.language)
         cat, letter, word = res
+
         if isinstance(word, tuple):
             word, markup = word
         else:
-            markup = None
+            if rep.passed:
+                markup = {'green': True}
+            elif rep.failed:
+                markup = {'red': True}
+            elif rep.skipped:
+                markup = {'yellow': True}
+            else:
+                markup = {}
+
         self.stats.setdefault(cat, []).append(rep)
         self._tests_ran = True
         if in_setup_or_teardown(letter, word):
@@ -197,33 +206,30 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
         running_xdist = hasattr(rep, 'node')
         self._progress_items_reported += 1
         if not self._is_verbose():
-            if not running_xdist and self._show_fs_path():
-                self.write_fspath_result(rep.nodeid, letter)
-            else:
-                self._write(letter)
-            self._write_progress_if_past_edge()
+            self._write_quiet_logreport(letter, rep, running_xdist)
         else:
-            if markup is None:
-                if rep.passed:
-                    markup = {'green': True}
-                elif rep.failed:
-                    markup = {'red': True}
-                elif rep.skipped:
-                    markup = {'yellow': True}
-                else:
-                    markup = {}
-            line = self._locationline(rep.nodeid, *rep.location)
-            if not running_xdist:
-                self._write_ensure_prefix(line, word, **markup)
+            self._write_verbose_logreport(markup, rep, running_xdist, word)
+
+    def _write_quiet_logreport(self, letter, rep, running_xdist):
+        if not running_xdist and self._show_fs_path():
+            self.write_fspath_result(rep.nodeid, letter)
+        else:
+            self._write(letter)
+        self._write_progress_if_past_edge()
+
+    def _write_verbose_logreport(self, markup, rep, running_xdist, word):
+        line = self._locationline(rep.nodeid, *rep.location)
+        if not running_xdist:
+            self._write_ensure_prefix(line, word, **markup)
+        else:
+            self._ensure_newline()
+            self._write("[%s]" % rep.node.gateway.id)
+            if self._show_progress_info:
+                self._write(self._get_progress_information_message() + " ", cyan=True)
             else:
-                self._ensure_newline()
-                self._write("[%s]" % rep.node.gateway.id)
-                if self._show_progress_info:
-                    self._write(self._get_progress_information_message() + " ", cyan=True)
-                else:
-                    self._write(' ')
-                self._write(word, **markup)
-                self._write(" " + line)
+                self._write(' ')
+            self._write(word, **markup)
+            self._write(" " + line)
 
     def pytest_collection(self):
         if not self.isatty and self._is_verbose():
