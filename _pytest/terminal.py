@@ -123,6 +123,9 @@ def get_language(config):
     return English()
 
 
+def in_setup_or_teardown(letter, word):
+    return not letter and not word
+
 class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin):
     def __init__(self, config, file=None, language=None):
         import _pytest.config
@@ -189,8 +192,7 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
             markup = None
         self.stats.setdefault(cat, []).append(rep)
         self._tests_ran = True
-        if not letter and not word:
-            # probably passed setup/teardown
+        if in_setup_or_teardown(letter, word):
             return
         running_xdist = hasattr(rep, 'node')
         self._progress_items_reported += 1
@@ -254,11 +256,7 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
             msg += get_pypy_version_message()
         msg += ", pytest-%s, py-%s, pluggy-%s" % (
                pytest.__version__, py.__version__, pluggy.__version__)
-        # the getattr(self.config.option, 'pastebin', None) means that the
-        # module is aware of the pastebin plugin.
-        # we are testing is here whether verbose or not
-        if self.verbosity > 0 or self.config.option.debug or \
-           getattr(self.config.option, 'pastebin', None):
+        if self._is_verbose() or self.config.getoption('debug') or self.config.getoption('pastebin'):
             msg += " -- " + str(sys.executable)
         self.write_line(msg)
         lines = self.config.hook.pytest_report_header(
@@ -337,9 +335,6 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
         else:
             res = "[location]"
         return res + " "
-
-
-
 
 
 def repr_pythonversion(v=None):
