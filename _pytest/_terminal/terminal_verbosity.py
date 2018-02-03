@@ -13,6 +13,7 @@ class TerminalVerbose(Enum):
 class VerbosityMixin(object):
     verbosity = None
 
+
     def _is_verbose(self):
         return self.verbosity >= TerminalVerbose.verbose.value
 

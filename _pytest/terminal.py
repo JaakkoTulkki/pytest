@@ -194,7 +194,7 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
             return
         running_xdist = hasattr(rep, 'node')
         self._progress_items_reported += 1
-        if self.verbosity <= 0:
+        if not self._is_verbose():
             if not running_xdist and self._show_fs_path():
                 self.write_fspath_result(rep.nodeid, letter)
             else:
@@ -236,7 +236,6 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
         items = [x for x in report.result if isinstance(x, pytest.Item)]
         self._numcollected += len(items)
         if self.isatty:
-            # self.write_fspath_result(report.nodeid, 'E')
             self.report_collect()
 
     def pytest_collection_modifyitems(self):
