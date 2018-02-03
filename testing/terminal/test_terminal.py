@@ -1135,7 +1135,7 @@ class TestProgress:
         output = testdir.runpytest('--language=en', '-v')
         assert 'ZeroDivisionError' not in output.stdout.str()
         output.stdout.fnmatch_lines([
-            '[mocked xdist] [100%] PASSED nodeid1 ',
+            '[mocked xdist] [100%] PASSED nodeid1 [mocked xdist] [100%] PASSED nodeid2 ',
             '=* 2 passed in *=',
         ])
 

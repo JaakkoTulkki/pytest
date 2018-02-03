@@ -140,7 +140,7 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
         # self.writer will be deprecated in pytest-3.4
         self.writer = self._tw
         self._screen_width = self._tw.fullwidth
-        # must be file system path
+        # file system path
         self.currentfspath = None
         self.reportchars = getreportopt(config)
         self.hasmarkup = self._tw.hasmarkup
@@ -222,7 +222,6 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
                     self._write(' ')
                 self._write(word, **markup)
                 self._write(" " + line)
-                self.currentfspath = -2
 
     def pytest_collection(self):
         if not self.isatty and self._is_verbose():
