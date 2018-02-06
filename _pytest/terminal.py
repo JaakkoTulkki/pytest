@@ -60,6 +60,8 @@ def pytest_addoption(parser):
                   help="console output: classic or with additional progress information (classic|progress).",
                   default='progress')
 
+SUCCESS_STATUS = 0
+FAILURE_STATUS = 1
 
 def mywriter(reporter):
     def writer(tags, args):
@@ -118,7 +120,7 @@ def pytest_report_teststatus(report, language):
 
 
 def get_language(config):
-    if config.option.language == 'es':
+    if config.getoption('language') == 'es':
         return Spanish()
     return English()
 
@@ -155,7 +157,7 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
     def pytest_internalerror(self, excrepr):
         for line in six.text_type(excrepr).split("\n"):
             self.write_line("%s> %s" % (self.language.get_internal_error(), line))
-        return 1
+        return FAILURE_STATUS
 
     def pytest_logwarning(self, code, fslocation, message, nodeid):
         warnings = self.stats.setdefault("warnings", [])
@@ -256,16 +258,12 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
         if not self._showheader():
             return
         self.write_sep("=", self.language.get_session_starts(), bold=True)
-        verinfo = platform.python_version()
-        msg = "%s %s -- Python %s" % (self.language.get_platform(),
-                                      sys.platform, verinfo)
-        if hasattr(sys, 'pypy_version_info'):
-            msg += get_pypy_version_message()
-        msg += ", pytest-%s, py-%s, pluggy-%s" % (
-               pytest.__version__, py.__version__, pluggy.__version__)
+
+        msg = self._get_python_info_msg()
         if self._is_verbose() or self.config.getoption('debug') or self.config.getoption('pastebin'):
             msg += " -- " + str(sys.executable)
         self.write_line(msg)
+
         lines = self.config.hook.pytest_report_header(
             config=self.config, startdir=self.startdir)
         self._write_report_lines_from_hooks(lines)
@@ -290,8 +288,8 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
                 self._tw.sep("!", self.language.get_colletion_failures())
                 for rep in self.stats.get('failed'):
                     rep.toterminal(self._tw)
-                return 1
-            return 0
+                return FAILURE_STATUS
+            return SUCCESS_STATUS
         lines = self.config.hook.pytest_report_collectionfinish(
             config=self.config, startdir=self.startdir, items=session.items)
         self._write_report_lines_from_hooks(lines)
@@ -342,6 +340,25 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
         else:
             res = "[location]"
         return res + " "
+
+    def _get_python_info_msg(self):
+        verinfo = platform.python_version()
+        msg = "%s %s -- Python %s" % (self.language.get_platform(),
+                                      sys.platform, verinfo)
+        if hasattr(sys, 'pypy_version_info'):
+            msg += get_pypy_version_message()
+        msg += ", pytest-%s, py-%s, pluggy-%s" % (
+            pytest.__version__, py.__version__, pluggy.__version__)
+        return msg
+
+    def _showheader(self):
+        return self._has_default_verbosity() or self._is_verbose()
+
+    def _show_long_test_info(self):
+        return self._is_verbose()
+
+    def _show_fs_path(self):
+        return self._has_default_verbosity() or self._is_verbose()
 
 
 def repr_pythonversion(v=None):

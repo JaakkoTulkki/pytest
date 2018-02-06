@@ -84,7 +84,7 @@ class TerminalSummaryMixin(object):
         return values
 
     def summary_passes(self):
-        if self.config.option.tbstyle != "no":
+        if self._get_tbstyle() != "no":
             if self.hasopt("P"):
                 reports = self.getreports('passed')
                 if not reports:
@@ -95,8 +95,11 @@ class TerminalSummaryMixin(object):
                     self.write_sep("_", msg)
                     self._outrep_summary(rep)
 
+    def _get_tbstyle(self):
+        return self.config.getoption('tbstyle')
+
     def summary_errors(self):
-        if self.config.option.tbstyle != "no":
+        if self._get_tbstyle() != "no":
             reports = self.getreports('error')
             if not reports:
                 return
@@ -115,13 +118,13 @@ class TerminalSummaryMixin(object):
 
 
     def summary_failures(self):
-        if self.config.option.tbstyle != "no":
+        if self._get_tbstyle() != "no":
             reports = self.getreports('failed')
             if not reports:
                 return
             self.write_sep("=", self.language.get_failures())
             for rep in reports:
-                if self.config.option.tbstyle == "line":
+                if self._get_tbstyle() == "line":
                     line = getcrashline(rep)
                     self.write_line(line)
                 else:

@@ -14,12 +14,6 @@ def flatten(values):
 
 class TerminalWriterMixin(object):
     _PROGRESS_LENGTH = len(' [100%]')
-    _tw = None
-    _session = None
-    _show_progress_info = False
-    _progress_items_reported = 0
-    config = None
-    startdir = None
 
     def write(self, content, **markup):
         self._write(content, **markup)
@@ -186,7 +180,7 @@ class TerminalWriterMixin(object):
         msg = _keyboardinterrupt_memo.reprcrash.message
         self.write_sep("!", msg)
         if "KeyboardInterrupt" in msg:
-            if self.config.option.fulltrace:
+            if self.config.getoption('fulltrace'):
                 _keyboardinterrupt_memo.toterminal(self._tw)
             else:
                 self._write_line(self.language.get_show_traceback_instructions(), yellow=True)
