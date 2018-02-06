@@ -126,6 +126,7 @@ def get_language(config):
 def in_setup_or_teardown(letter, word):
     return not letter and not word
 
+
 class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin):
     def __init__(self, config, file=None, language=None):
         import _pytest.config
@@ -163,7 +164,7 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
         warnings.append(warning)
 
     def pytest_plugin_registered(self, plugin):
-        if self.config.option.traceconfig:
+        if self.config.getoption('traceconfig'):
             # XXX this event may happen during setup/teardown time
             #     which unfortunately captures our output here
             #     which garbles our output if we use self.write_line
@@ -283,7 +284,7 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
         return lines
 
     def pytest_collection_finish(self, session):
-        if self.config.option.collectonly:
+        if self.config.getoption('collectonly'):
             self._printcollecteditems(session.items)
             if self.stats.get('failed'):
                 self._tw.sep("!", self.language.get_colletion_failures())
