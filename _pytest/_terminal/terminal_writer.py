@@ -40,12 +40,7 @@ class TerminalWriterMixin(object):
             fill = ' ' * fill_count
         else:
             fill = ''
-        # line = line.encode('utf-8')
-        # fill = fill.encode('utf-8')
         self._write("\r" + str(line) + str(fill), **markup)
-        # line = line.encode('utf-8')
-        # fill = fill.encode('utf-8')
-        # self._write("\r" + line + fill, **markup)
 
 
     def section(self, title, sep="=", **kw):
