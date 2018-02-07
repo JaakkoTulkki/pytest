@@ -5,7 +5,7 @@ class WarningReport:
     Simple structure to hold warnings information captured by ``pytest_logwarning``.
     """
 
-    def __init__(self, code, message, nodeid=None, fslocation=None):
+    def __init__(self, message, nodeid=None, fslocation=None):
         """
         :param code: unused
         :param str message: user friendly message about the warning
@@ -13,7 +13,6 @@ class WarningReport:
         :param tuple|py.path.local fslocation:
             file system location of the source of the warning (see ``get_location``).
         """
-        self.code = code
         self.message = message
         self.nodeid = nodeid
         self.fslocation = fslocation

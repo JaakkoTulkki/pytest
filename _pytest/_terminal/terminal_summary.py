@@ -2,54 +2,6 @@ import itertools
 
 import time
 
-def getcrashline(rep):
-    """
-    :param rep: _pytest.runner.TestReport
-    :return: crashline
-    """
-    try:
-        return str(rep.longrepr.reprcrash)
-    except AttributeError:
-        try:
-            return str(rep.longrepr)[:50]
-        except AttributeError:
-            return ""
-
-
-def build_summary_stats_line(stats, translation_table=None, no_tests_ran='no tests ran'):
-    keys = ("failed passed skipped deselected "
-            "xfailed xpassed warnings error").split()
-    if not translation_table:
-        translation_table = {k: k for k in keys}
-    unknown_key_seen = False
-    # this could be [k for k in stats.keys() if k]
-    for key in stats.keys():
-        if key not in keys:
-            if key:  # setup/teardown reports have an empty key, ignore them
-                keys.append(key)
-                unknown_key_seen = True
-    parts = []
-    for key in keys:
-        val = stats.get(key, None)
-        if val:
-            parts.append("%d %s" % (len(val), translation_table.get(key, key)))
-
-    if parts:
-        line = ", ".join(parts)
-    else:
-        line = no_tests_ran
-
-    if 'failed' in stats or 'error' in stats:
-        color = 'red'
-    elif 'warnings' in stats or unknown_key_seen:
-        color = 'yellow'
-    elif 'passed' in stats:
-        color = 'green'
-    else:
-        color = 'yellow'
-
-    return (line, color)
-
 
 class TerminalSummaryMixin(object):
 
@@ -73,10 +25,8 @@ class TerminalSummaryMixin(object):
                 self._write_line()
             self._write_line('-- Docs: http://doc.pytest.org/en/latest/warnings.html')
 
-    #
-    # summaries for sessionfinish
-    #
     def getreports(self, name):
+        """ Summaries for sessionfinish."""
         values = []
         for x in self.stats.get(name, []):
             if not hasattr(x, '_pdbshown'):
@@ -84,16 +34,15 @@ class TerminalSummaryMixin(object):
         return values
 
     def summary_passes(self):
-        if self._get_tbstyle() != "no":
-            if self.hasopt("P"):
-                reports = self.getreports('passed')
-                if not reports:
-                    return
-                self.write_sep("=", self.language.get_passes())
-                for rep in reports:
-                    msg = self._getfailureheadline(rep)
-                    self.write_sep("_", msg)
-                    self._outrep_summary(rep)
+        if self._get_tbstyle() != "no" and self.hasopt("P"):
+            reports = self.getreports('passed')
+            if not reports:
+                return
+            self.write_sep("=", self.language.get_passes())
+            for rep in reports:
+                msg = self._getfailureheadline(rep)
+                self.write_sep("_", msg)
+                self._outrep_summary(rep)
 
     def _get_tbstyle(self):
         return self.config.getoption('tbstyle')
@@ -168,10 +117,12 @@ class TerminalSummaryMixin(object):
 
         line += str(self._numcollected) + " " + (
             self.language.get_item() if self._numcollected == 1 else self.language.get_item_plural())
+
         if errors:
             line += " / %d %s" % (errors, self.language.get_errors_lower())
         if skipped:
             line += " / %d %s" % (skipped, self.language.get_skipped_lower())
+
         if self.isatty:
             self.rewrite(line, bold=True, erase=True)
             if final:
@@ -184,7 +135,7 @@ class TerminalSummaryMixin(object):
             fspath, lineno, domain = rep.location
             return domain
         else:
-            return self.language.get_test_session()  # XXX?
+            return self.language.get_test_session()
 
     def hasopt(self, char):
         char = {'xfailed': 'x', 'skipped': 's'}.get(char, char)
@@ -197,3 +148,56 @@ class TerminalSummaryMixin(object):
             if content[-1:] == "\n":
                 content = content[:-1]
             self._write_line(content)
+
+
+def getcrashline(rep):
+    """
+    :param rep: _pytest.runner.TestReport
+    :return: crashline
+    """
+    try:
+        return str(rep.longrepr.reprcrash)
+    except AttributeError:
+        try:
+            return str(rep.longrepr)[:50]
+        except AttributeError:
+            return ""
+
+
+def build_summary_stats_line(stats, translation_table=None, no_tests_ran='no tests ran'):
+    keys = ("failed passed skipped deselected "
+            "xfailed xpassed warnings error").split()
+    if not translation_table:
+        translation_table = {k: k for k in keys}
+    unknown_key_seen = False
+
+    for stat_key in stats.keys():
+        if stat_key and stat_key not in keys: # setup/teardown reports have an empty key, ignore them
+            keys.append(stat_key)
+            unknown_key_seen = True
+
+    parts = []
+    for key in keys:
+        val = stats.get(key)
+        if val:
+            parts.append("%d %s" % (len(val), translation_table.get(key, key)))
+
+    if parts:
+        line = ", ".join(parts)
+    else:
+        line = no_tests_ran
+
+    color = _get_summary_line_color(stats, unknown_key_seen)
+    return (line, color)
+
+
+def _get_summary_line_color(stats, unknown_key_seen):
+    if 'failed' in stats or 'error' in stats:
+        color = 'red'
+    elif 'warnings' in stats or unknown_key_seen:
+        color = 'yellow'
+    elif 'passed' in stats:
+        color = 'green'
+    else:
+        color = 'yellow'
+    return color

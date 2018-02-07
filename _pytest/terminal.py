@@ -99,7 +99,7 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
 
     def pytest_logwarning(self, code, fslocation, message, nodeid):
         warnings = self.stats.setdefault("warnings", [])
-        warning = WarningReport(code=code, fslocation=fslocation,
+        warning = WarningReport(fslocation=fslocation,
                                 message=message, nodeid=nodeid)
         warnings.append(warning)
 

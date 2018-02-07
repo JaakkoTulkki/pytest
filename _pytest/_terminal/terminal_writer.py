@@ -12,11 +12,15 @@ def flatten(values):
         else:
             yield x
 
+
 class TerminalWriterMixin(object):
     _PROGRESS_LENGTH = len(' [100%]')
 
     def write(self, content, **markup):
         self._write(content, **markup)
+
+    def _write(self, *args, **kwargs):
+        self._tw.write(*args, **kwargs)
 
     def write_line(self, line, ensure_newline=True, **markup):
         if not isinstance(line, six.text_type):
@@ -42,7 +46,6 @@ class TerminalWriterMixin(object):
             fill = ''
         self._write("\r" + str(line) + str(fill), **markup)
 
-
     def section(self, title, sep="=", **kw):
         self._tw.sep(sep, title, **kw)
 
@@ -57,10 +60,6 @@ class TerminalWriterMixin(object):
         if self.currentfspath:
             self._write_line()
             self.currentfspath = None
-
-    def _write(self, *args, **kwargs):
-        self._tw.write(*args, **kwargs)
-
 
     def _write_line(self, *args, **kwargs):
         self._tw.line(*args, **kwargs)
