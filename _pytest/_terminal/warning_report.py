@@ -7,7 +7,6 @@ class WarningReport:
 
     def __init__(self, message, nodeid=None, fslocation=None):
         """
-        :param code: unused
         :param str message: user friendly message about the warning
         :param str|None nodeid: node id that generated the warning (see ``get_location``).
         :param tuple|py.path.local fslocation:
