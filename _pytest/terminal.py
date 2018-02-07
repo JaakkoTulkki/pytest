@@ -361,15 +361,6 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
         return self._has_default_verbosity() or self._is_verbose()
 
 
-def repr_pythonversion(v=None):
-    if v is None:
-        v = sys.version_info
-    try:
-        return "%s.%s.%s-%s-%s" % v
-    except (TypeError, ValueError):
-        return str(v)
-
-
 def _plugin_nameversions(plugininfo):
     values = []
     for plugin, dist in plugininfo:
