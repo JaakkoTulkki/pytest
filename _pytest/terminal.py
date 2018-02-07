@@ -63,71 +63,6 @@ def pytest_addoption(parser):
 SUCCESS_STATUS = 0
 FAILURE_STATUS = 1
 
-def mywriter(reporter):
-    def writer(tags, args):
-        msg = " ".join(map(str, args))
-        reporter.write_line("[traceconfig] " + msg)
-    return writer
-
-
-def get_pypy_version_message():
-    verinfo = ".".join(map(str, sys.pypy_version_info[:3]))
-    return "[pypy-%s-%s]" % (verinfo, sys.pypy_version_info[3])
-
-
-def pytest_configure(config):
-    config.option.verbose -= config.option.quiet
-    reporter = TerminalReporter(config, sys.stdout)
-    config.pluginmanager.register(reporter, 'terminalreporter')
-    if config.option.debug or config.option.traceconfig:
-        config.trace.root.setprocessor("pytest:config", mywriter(reporter))
-
-
-def getreportopt(config):
-    reportopts = ""
-    reportchars = config.option.reportchars
-    if not config.option.disable_warnings and 'w' not in reportchars:
-        reportchars += 'w'
-    elif config.option.disable_warnings and 'w' in reportchars:
-        reportchars = reportchars.replace('w', '')
-    if reportchars:
-        for char in reportchars:
-            if char not in reportopts and char != 'a':
-                reportopts += char
-            elif char == 'a':
-                reportopts = 'fEsxXw'
-    return reportopts
-
-
-def pytest_report_teststatus(report, language):
-    """
-    :param report: instance or _pytest.runner.TestReport
-    :param language: instance of Language
-    :return:
-    """
-    if report.passed:
-        letter = "."
-    elif report.skipped:
-        letter = "s"
-    elif report.failed:
-        letter = "F"
-    if language is None:
-        outcome_result = report.outcome.upper()
-    else:
-        outcome_result = language.get_test_result_translation(report.outcome).upper()
-
-    return report.outcome, letter, outcome_result
-
-
-def get_language(config):
-    if config.getoption('language') == 'es':
-        return Spanish()
-    return English()
-
-
-def in_setup_or_teardown(letter, word):
-    return not letter and not word
-
 
 class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin):
     def __init__(self, config, file=None, language=None):
@@ -152,7 +87,10 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
         self.hasmarkup = self._tw.hasmarkup
         self.isatty = file.isatty()
         self._progress_items_reported = 0
-        self._show_progress_info = self.config.getini('console_output_style') == 'progress'
+
+
+    def _show_progress_info(self):
+        return self.config.getini('console_output_style') == 'progress'
 
     def pytest_internalerror(self, excrepr):
         for line in six.text_type(excrepr).split("\n"):
@@ -208,10 +146,10 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
             return
         running_xdist = hasattr(rep, 'node')
         self._progress_items_reported += 1
-        if not self._is_verbose():
-            self._write_quiet_logreport(letter, rep, running_xdist)
-        else:
+        if self._is_verbose():
             self._write_verbose_logreport(markup, rep, running_xdist, word)
+        else:
+            self._write_quiet_logreport(letter, rep, running_xdist)
 
     def _write_quiet_logreport(self, letter, rep, running_xdist):
         if not running_xdist and self._show_fs_path():
@@ -227,7 +165,7 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
         else:
             self._ensure_newline()
             self._write("[%s]" % rep.node.gateway.id)
-            if self._show_progress_info:
+            if self._show_progress_info():
                 self._write(self._get_progress_information_message() + " ", cyan=True)
             else:
                 self._write(' ')
@@ -273,10 +211,8 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
         if config.inifile:
             inifile = " " + config.rootdir.bestrelpath(config.inifile)
         lines = ["rootdir: %s, inifile:%s" % (config.rootdir, inifile)]
-
         plugininfo = config.pluginmanager.list_plugin_distinfo()
         if plugininfo:
-
             lines.append(
                 "plugins: %s" % ", ".join(_plugin_nameversions(plugininfo)))
         return lines
@@ -374,3 +310,69 @@ def _plugin_nameversions(plugininfo):
         if name not in values:
             values.append(name)
     return values
+
+
+def mywriter(reporter):
+    def writer(tags, args):
+        msg = " ".join(map(str, args))
+        reporter.write_line("[traceconfig] " + msg)
+    return writer
+
+
+def get_pypy_version_message():
+    verinfo = ".".join(map(str, sys.pypy_version_info[:3]))
+    return "[pypy-%s-%s]" % (verinfo, sys.pypy_version_info[3])
+
+
+def pytest_configure(config):
+    config.option.verbose -= config.option.quiet
+    reporter = TerminalReporter(config, sys.stdout)
+    config.pluginmanager.register(reporter, 'terminalreporter')
+    if config.option.debug or config.option.traceconfig:
+        config.trace.root.setprocessor("pytest:config", mywriter(reporter))
+
+
+def getreportopt(config):
+    reportopts = ""
+    reportchars = config.option.reportchars
+    if not config.option.disable_warnings and 'w' not in reportchars:
+        reportchars += 'w'
+    elif config.option.disable_warnings and 'w' in reportchars:
+        reportchars = reportchars.replace('w', '')
+    if reportchars:
+        for char in reportchars:
+            if char not in reportopts and char != 'a':
+                reportopts += char
+            elif char == 'a':
+                reportopts = 'fEsxXw'
+    return reportopts
+
+
+def pytest_report_teststatus(report, language):
+    """
+    :param report: instance or _pytest.runner.TestReport
+    :param language: instance of Language
+    :return:
+    """
+    if report.passed:
+        letter = "."
+    elif report.skipped:
+        letter = "s"
+    elif report.failed:
+        letter = "F"
+    if language is None:
+        outcome_result = report.outcome.upper()
+    else:
+        outcome_result = language.get_test_result_translation(report.outcome).upper()
+
+    return report.outcome, letter, outcome_result
+
+
+def get_language(config):
+    if config.getoption('language') == 'es':
+        return Spanish()
+    return English()
+
+
+def in_setup_or_teardown(letter, word):
+    return not letter and not word

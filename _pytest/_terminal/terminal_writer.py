@@ -80,7 +80,7 @@ class TerminalWriterMixin(object):
             self._write_progress_information_filling_space()
 
     def _write_progress_information_filling_space(self):
-        if not self._show_progress_info:
+        if not self._show_progress_info():
             return
         msg = self._get_progress_information_message()
         fill = ' ' * (self._tw.fullwidth - self._tw.chars_on_current_line - len(msg) - 1)
@@ -115,7 +115,7 @@ class TerminalWriterMixin(object):
         self._write(res)
 
     def _write_progress_if_past_edge(self):
-        if not self._show_progress_info:
+        if not self._show_progress_info():
             return
         last_item = self._progress_items_reported == self._session.testscollected
         if last_item:
