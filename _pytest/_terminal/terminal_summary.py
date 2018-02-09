@@ -54,17 +54,19 @@ class TerminalSummaryMixin(object):
                 return
             self.write_sep("=", self.language.get_errors())
             for rep in self.stats['error']:
-                msg = self._getfailureheadline(rep)
-                if not hasattr(rep, 'when'):
-                    # collect
-                    msg = self.language.get_errors_collecting() + msg
-                elif rep.when == "setup":
-                    msg = self.language.get_errors_setup() + " " + msg
-                elif rep.when == "teardown":
-                    msg = self.language.get_errors_teardown() + " " + msg
-                self.write_sep("_", msg)
-                self._outrep_summary(rep)
+                self._write_error(rep)
 
+    def _write_error(self, rep):
+        msg = self._getfailureheadline(rep)
+        if not hasattr(rep, 'when'):
+            # collect
+            msg = self.language.get_errors_collecting() + msg
+        elif rep.when == "setup":
+            msg = self.language.get_errors_setup() + " " + msg
+        elif rep.when == "teardown":
+            msg = self.language.get_errors_teardown() + " " + msg
+        self.write_sep("_", msg)
+        self._outrep_summary(rep)
 
     def summary_failures(self):
         if self._get_tbstyle() != "no":
@@ -110,10 +112,7 @@ class TerminalSummaryMixin(object):
 
         errors = len(self.stats.get('error', []))
         skipped = len(self.stats.get('skipped', []))
-        if final:
-            line = self.language.get_collected() + " "
-        else:
-            line = self.language.get_collecting() + " "
+        line = (self.language.get_collected() if final else self.language.get_collecting()) + " "
 
         line += str(self._numcollected) + " " + (
             self.language.get_item() if self._numcollected == 1 else self.language.get_item_plural())

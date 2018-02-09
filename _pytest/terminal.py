@@ -131,14 +131,7 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
         if isinstance(word, tuple):
             word, markup = word
         else:
-            if rep.passed:
-                markup = {'green': True}
-            elif rep.failed:
-                markup = {'red': True}
-            elif rep.skipped:
-                markup = {'yellow': True}
-            else:
-                markup = {}
+            markup = self._get_logreport_markup(rep)
 
         self.stats.setdefault(cat, []).append(rep)
         self._tests_ran = True
@@ -150,6 +143,17 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
             self._write_verbose_logreport(markup, rep, running_xdist, word)
         else:
             self._write_quiet_logreport(letter, rep, running_xdist)
+
+    def _get_logreport_markup(self, rep):
+        if rep.passed:
+            markup = {'green': True}
+        elif rep.failed:
+            markup = {'red': True}
+        elif rep.skipped:
+            markup = {'yellow': True}
+        else:
+            markup = {}
+        return markup
 
     def _write_quiet_logreport(self, letter, rep, running_xdist):
         if not running_xdist and self._show_fs_path():

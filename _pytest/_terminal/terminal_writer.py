@@ -145,30 +145,39 @@ class TerminalWriterMixin(object):
         # because later versions are going to get rid of them anyway
 
         if self._is_more_quiet():
-            counts = {}
-            for item in items:
-                name = item.nodeid.split('::', 1)[0]
-                counts[name] = counts.get(name, 0) + 1
-            for name, count in sorted(counts.items()):
-                self._write_line("%s: %d" % (name, count))
+            self._write_very_quiet_collected_items(items)
 
         elif self._is_quiet():
-            for item in items:
-                nodeid = item.nodeid
-                nodeid = nodeid.replace("::()::", "::")
-                self._write_line(nodeid)
+            self._write_quiet_collected_items(items)
         else:
-            stack = []
-            for item in items:
-                needed_collectors = item.listchain()[1:]  # strip root node
-                while stack:
-                    if stack == needed_collectors[:len(stack)]:
-                        break
-                    stack.pop()
-                for col in needed_collectors[len(stack):]:
-                    stack.append(col)
-                    indent = (len(stack) - 1) * "  "
-                    self._write_line("%s%s" % (indent, col))
+            self._write_verbose_collected_items(items)
+
+    def _write_verbose_collected_items(self, items):
+        stack = []
+        for item in items:
+            needed_collectors = item.listchain()[1:]  # strip root node
+            while stack:
+                if stack == needed_collectors[:len(stack)]:
+                    break
+                stack.pop()
+            for col in needed_collectors[len(stack):]:
+                stack.append(col)
+                indent = (len(stack) - 1) * "  "
+                self._write_line("%s%s" % (indent, col))
+
+    def _write_quiet_collected_items(self, items):
+        for item in items:
+            nodeid = item.nodeid
+            nodeid = nodeid.replace("::()::", "::")
+            self._write_line(nodeid)
+
+    def _write_very_quiet_collected_items(self, items):
+        counts = {}
+        for item in items:
+            name = item.nodeid.split('::', 1)[0]
+            counts[name] = counts.get(name, 0) + 1
+        for name, count in sorted(counts.items()):
+            self._write_line("%s: %d" % (name, count))
 
     def _report_keyboardinterrupt(self, _keyboardinterrupt_memo):
         msg = _keyboardinterrupt_memo.reprcrash.message

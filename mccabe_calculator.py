@@ -1,6 +1,6 @@
 results = []
 
-with open('11-01-2018-mccabe.txt', 'r') as f:
+with open('09-02-2018-mccabe.txt', 'r') as f:
     for row in f:
         mccabe_cc = float(row.split(" ")[-1])
         results.append(mccabe_cc)
