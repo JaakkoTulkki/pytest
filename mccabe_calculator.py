@@ -1,3 +1,5 @@
+# python -m mccabe _pytest/terminal.py
+
 results = []
 
 with open('09-02-2018-mccabe.txt', 'r') as f:
