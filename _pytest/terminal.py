@@ -60,6 +60,7 @@ def pytest_addoption(parser):
                   help="console output: classic or with additional progress information (classic|progress).",
                   default='progress')
 
+
 SUCCESS_STATUS = 0
 FAILURE_STATUS = 1
 
@@ -87,7 +88,6 @@ class TerminalReporter(VerbosityMixin, TerminalWriterMixin, TerminalSummaryMixin
         self.hasmarkup = self._tw.hasmarkup
         self.isatty = file.isatty()
         self._progress_items_reported = 0
-
 
     def _show_progress_info(self):
         return self.config.getini('console_output_style') == 'progress'

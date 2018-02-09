@@ -7,7 +7,7 @@ import collections
 import sys
 try:
     from unittest import mock
-except:
+except ImportError:
     from mock import mock
 
 import pluggy
@@ -73,7 +73,7 @@ def test_my_writer():
 
 
 def test_get_pypy_version_message():
-    with mock.patch.object(sys, 'pypy_version_info', create=True) as mock_obj:
+    with mock.patch.object(sys, 'pypy_version_info', create=True):
         actual = get_pypy_version_message()
         assert actual.startswith('[pypy--<MagicMock')
 
@@ -379,7 +379,6 @@ class TestCollectonly(object):
         result.stdout.fnmatch_lines([
             '*test_fun.py: 1*',
         ])
-
 
 
 class TestFixtureReporting(object):
@@ -975,6 +974,7 @@ def test_terminal_summary_warnings_are_displayed_with_fslocation(testdir):
         '*internal warning',
         '*== 1 warnings in *',
     ])
+
 
 def test_terminal_summary_warnings_are_displayed_with_fslocation_as_tuple(testdir):
     testdir.makeconftest("""

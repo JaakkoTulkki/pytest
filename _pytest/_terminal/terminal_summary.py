@@ -171,7 +171,7 @@ def build_summary_stats_line(stats, translation_table=None, no_tests_ran='no tes
     unknown_key_seen = False
 
     for stat_key in stats.keys():
-        if stat_key and stat_key not in keys: # setup/teardown reports have an empty key, ignore them
+        if stat_key and stat_key not in keys:  # setup/teardown reports have an empty key, ignore them
             keys.append(stat_key)
             unknown_key_seen = True
 

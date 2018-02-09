@@ -83,23 +83,6 @@ class TerminalWriterMixin(object):
     def write_fspath_result(self, nodeid, res):
         fspath = self.config.rootdir.join(nodeid.split("::")[0])
         if fspath != self.currentfspath:
-            """
-            used to be: if self.currentfspath is not None:
-            This did not mean a lot. We also had strange assaignemt in other methods:
-            self.currentfspath = -2
-            The "-2" did not really mean anything. This value was not checked anywhere
-
-            We also had an expression "if self.currentfspath"
-            This seemed to indicate that sometimes currentfspath was to be set to
-            non-truthy value but while it was checked whether it was not None
-
-            It seemed like the value "-2" meant that something was to be ignored. This raised
-            a question whether instead we should be just checking whether the condition what was to be checked.
-            Thus, we just commented out "if self.currentfspath is not None" and executed self._write_progress_information_filling_space()
-            every time. We had two failing tests that indicated that the code failed because tests had not been collected
-            Thus, we refactored the guard
-            """
-
             if hasattr(self._session, 'testscollected'):
                 self._write_progress_information_filling_space()
             self.currentfspath = fspath

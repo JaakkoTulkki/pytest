@@ -1,5 +1,6 @@
 import py
 
+
 class WarningReport:
     """
     Simple structure to hold warnings information captured by ``pytest_logwarning``.
