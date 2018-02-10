@@ -2,6 +2,7 @@
 .svn
 .hgsvn
 .venv
+.venv36
 
 # Ignore local virtualenvs
 lib/
