@@ -4,6 +4,18 @@ from .language import Language
 
 
 class Spanish(Language):
+    def get_error(self):
+        return 'error'
+
+    def get_skip(self):
+        return 'omitido'
+
+    def get_fail(self):
+        return 'fallado'
+
+    def get_passed(self):
+        return 'pasado'
+
     def get_skipped_summary_header(self):
         return 'resumen breve de pruebas'
 

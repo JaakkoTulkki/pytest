@@ -132,3 +132,19 @@ class Language(object):
     @abstractmethod
     def get_skipped_summary_header(self):
         raise NotImplementedError('Not implemented')
+
+    @abstractmethod
+    def get_fail(self):
+        raise NotImplementedError('Not implemented')
+
+    @abstractmethod
+    def get_skip(self):
+        raise NotImplementedError('Not implemented')
+
+    @abstractmethod
+    def get_error(self):
+        raise NotImplementedError('Not implemented')
+
+    @abstractmethod
+    def get_passed(self):
+        raise NotImplementedError('Not implemented')

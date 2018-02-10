@@ -299,13 +299,13 @@ def pytest_terminal_summary(terminalreporter):
         elif char == "X":
             show_xpassed(terminalreporter, lines)
         elif char in "fF":
-            show_simple(terminalreporter, lines, 'failed', "FAIL %s")
+            show_simple(terminalreporter, lines, 'failed', terminalreporter.language.get_fail().upper() + " %s")
         elif char in "sS":
             show_skipped(terminalreporter, lines)
         elif char == "E":
-            show_simple(terminalreporter, lines, 'error', "ERROR %s")
+            show_simple(terminalreporter, lines, 'error', terminalreporter.language.get_error().upper() + " %s")
         elif char == 'p':
-            show_simple(terminalreporter, lines, 'passed', "PASSED %s")
+            show_simple(terminalreporter, lines, 'passed', terminalreporter.language.get_passed().upper() + " %s")
 
     if lines:
         # todo this into function
@@ -384,15 +384,15 @@ def show_skipped(terminalreporter, lines):
         #    return
         fskips = folded_skips(skipped)
         if fskips:
-            # tr.write_sep("_", "skipped test summary")
+            skip_text = terminalreporter.language.get_skip().upper()
             for num, fspath, lineno, reason in fskips:
                 if reason.startswith("Skipped: "):
                     reason = reason[9:]
                 if lineno is not None:
                     lines.append(
-                        "SKIP [%d] %s:%d: %s" %
-                        (num, fspath, lineno + 1, reason))
+                        "%s [%d] %s:%d: %s" %
+                        (skip_text, num, fspath, lineno + 1, reason))
                 else:
                     lines.append(
-                        "SKIP [%d] %s: %s" %
-                        (num, fspath, reason))
+                        "%s [%d] %s: %s" %
+                        (skip_text, num, fspath, reason))

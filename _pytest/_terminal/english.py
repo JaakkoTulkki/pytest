@@ -2,6 +2,18 @@ from .language import Language
 
 
 class English(Language):
+    def get_error(self):
+        return 'error'
+
+    def get_skip(self):
+        return 'skip'
+
+    def get_fail(self):
+        return 'fail'
+
+    def get_passed(self):
+        return 'pass'
+
     def get_skipped_summary_header(self):
         return 'short test summary info'
 
