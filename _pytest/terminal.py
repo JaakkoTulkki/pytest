@@ -14,10 +14,10 @@ import six
 
 import pytest
 from _pytest import nodes
-from _pytest.english import English
+from _pytest._terminal.english import English
 from _pytest.main import EXIT_OK, EXIT_TESTSFAILED, EXIT_INTERRUPTED, \
     EXIT_USAGEERROR, EXIT_NOTESTSCOLLECTED
-from _pytest.spanish import Spanish
+from _pytest._terminal.spanish import Spanish
 from ._terminal.terminal_verbosity import VerbosityMixin
 from ._terminal.terminal_writer import TerminalWriterMixin
 from ._terminal.warning_report import WarningReport

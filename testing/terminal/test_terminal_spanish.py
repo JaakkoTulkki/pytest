@@ -9,7 +9,7 @@ import _pytest
 import pytest
 from _pytest.terminal import TerminalReporter
 from _pytest._terminal.terminal_summary import build_summary_stats_line
-from _pytest.spanish import Spanish
+from _pytest._terminal.spanish import Spanish
 
 
 class Option(object):
@@ -566,7 +566,7 @@ class TestProgressSpanish:
         testdir.makeconftest("""
         def pytest_collection_modifyitems(items, config):
             from _pytest.runner import CollectReport
-            from _pytest.spanish import Spanish
+            from _pytest._terminal.spanish import Spanish
             for node_id in ('nodeid1', 'nodeid2'):
                 rep = CollectReport(node_id, 'passed', None, None)
                 rep.when = 'passed'
