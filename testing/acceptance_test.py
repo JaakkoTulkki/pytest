@@ -140,14 +140,14 @@ class TestGeneralUsage(object):
         testdir.makepyfile("")
         testdir.makeconftest("import qwerty")
         result = testdir.runpytest("--help")
-        result.stdout.fnmatch_lines("""
+        result.stdout.fnmatch_lines(str("""
             *--version*
             *warning*conftest.py*
-        """)
+        """))
         result = testdir.runpytest()
-        result.stderr.fnmatch_lines("""
+        result.stderr.fnmatch_lines(str("""
             *ERROR*could not load*conftest.py*
-        """)
+        """))
 
     def test_early_skip(self, testdir):
         testdir.mkdir("xyz")
@@ -366,9 +366,9 @@ class TestGeneralUsage(object):
 
     def test_unknown_option(self, testdir):
         result = testdir.runpytest("--qwlkej")
-        result.stderr.fnmatch_lines("""
+        result.stderr.fnmatch_lines(str("""
             *unrecognized*
-        """)
+        """))
 
     def test_getsourcelines_error_issue553(self, testdir, monkeypatch):
         monkeypatch.setattr("inspect.getsourcelines", None)
@@ -399,7 +399,7 @@ class TestGeneralUsage(object):
 
         p = tmpdir.join('test_test_plugins_given_as_strings.py')
         p.write('def test_foo(): pass')
-        mod = types.ModuleType("myplugin")
+        mod = types.ModuleType(str("myplugin"))
         monkeypatch.setitem(sys.modules, 'myplugin', mod)
         assert pytest.main(args=[str(tmpdir)], plugins=['myplugin']) == 0
 
@@ -855,11 +855,11 @@ class TestDurationWithFixture(object):
         result = testdir.runpytest("--durations=10")
         assert result.ret == 0
 
-        result.stdout.fnmatch_lines_random("""
+        result.stdout.fnmatch_lines_random(str("""
             *durations*
             * setup *test_1*
             * call *test_1*
-        """)
+        """))
 
 
 def test_zipimport_hook(testdir, tmpdir):
