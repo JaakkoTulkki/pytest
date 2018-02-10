@@ -2,7 +2,7 @@ from subprocess import call
 
 
 def run_tests():
-    cmd = 'python pytest.py testing/test_terminal.py '
+    cmd = 'python pytest.py test_performance.py'
     call(cmd, shell=True)
 
 
