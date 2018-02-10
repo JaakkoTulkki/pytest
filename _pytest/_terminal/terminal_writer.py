@@ -44,7 +44,7 @@ class TerminalWriterMixin(object):
             fill = ' ' * fill_count
         else:
             fill = ''
-        self._write("\r" + str(line) + str(fill), **markup)
+        self._write("\r" + line + fill, **markup)
 
     def section(self, title, sep="=", **kw):
         self._tw.sep(sep, title, **kw)

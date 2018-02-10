@@ -137,17 +137,17 @@ class TestGeneralUsage(object):
         ])
 
     def test_issue486_better_reporting_on_conftest_load_failure(self, testdir):
-        testdir.makepyfile(str(""))
-        testdir.makeconftest(str("import qwerty"))
-        result = testdir.runpytest(str("--help"))
-        result.stdout.fnmatch_lines(str("""
+        testdir.makepyfile("")
+        testdir.makeconftest("import qwerty")
+        result = testdir.runpytest("--help")
+        result.stdout.fnmatch_lines("""
             *--version*
             *warning*conftest.py*
-        """))
+        """)
         result = testdir.runpytest()
-        result.stderr.fnmatch_lines(str("""
+        result.stderr.fnmatch_lines("""
             *ERROR*could not load*conftest.py*
-        """))
+        """)
 
     def test_early_skip(self, testdir):
         testdir.mkdir("xyz")
@@ -365,10 +365,10 @@ class TestGeneralUsage(object):
         assert res.ret == 0
 
     def test_unknown_option(self, testdir):
-        result = testdir.runpytest(str("--qwlkej"))
-        result.stderr.fnmatch_lines(str("""
+        result = testdir.runpytest("--qwlkej")
+        result.stderr.fnmatch_lines("""
             *unrecognized*
-        """))
+        """)
 
     def test_getsourcelines_error_issue553(self, testdir, monkeypatch):
         monkeypatch.setattr("inspect.getsourcelines", None)
@@ -399,7 +399,7 @@ class TestGeneralUsage(object):
 
         p = tmpdir.join('test_test_plugins_given_as_strings.py')
         p.write('def test_foo(): pass')
-        mod = types.ModuleType(str("myplugin"))
+        mod = types.ModuleType("myplugin")
         monkeypatch.setitem(sys.modules, 'myplugin', mod)
         assert pytest.main(args=[str(tmpdir)], plugins=['myplugin']) == 0
 
@@ -852,14 +852,14 @@ class TestDurationWithFixture(object):
 
     def test_setup_function(self, testdir):
         testdir.makepyfile(self.source)
-        result = testdir.runpytest(str("--durations=10"))
+        result = testdir.runpytest("--durations=10")
         assert result.ret == 0
 
-        result.stdout.fnmatch_lines_random(str("""
+        result.stdout.fnmatch_lines_random("""
             *durations*
             * setup *test_1*
             * call *test_1*
-        """))
+        """)
 
 
 def test_zipimport_hook(testdir, tmpdir):
