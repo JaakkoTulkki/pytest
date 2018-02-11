@@ -325,7 +325,6 @@ class TestCollectonly(object):
         assert result.ret == 3
 
     def test_collectonly_simple(self, testdir):
-        # todo remove comments
         p = testdir.makepyfile("""
             def test_func1():
                 pass
@@ -334,7 +333,6 @@ class TestCollectonly(object):
                     pass
         """)
         result = testdir.runpytest("--collect-only", p)
-        # assert stderr.startswith("inserting into sys.path")
         assert result.ret == 0
         result.stdout.fnmatch_lines([
             "*<Module '*.py'>",
@@ -539,7 +537,6 @@ class TestTerminalFunctional(object):
             ])
 
     def test_showlocals(self, testdir):
-        # todo remove comment
         p1 = testdir.makepyfile("""
             def test_showlocals():
                 x = 3
@@ -548,7 +545,6 @@ class TestTerminalFunctional(object):
         """)
         result = testdir.runpytest(p1, '-l')
         result.stdout.fnmatch_lines([
-            # "_ _ * Locals *",
             "x* = 3",
             "y* = 'xxxxxx*"
         ])

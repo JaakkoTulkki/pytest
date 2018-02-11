@@ -308,7 +308,6 @@ def pytest_terminal_summary(terminalreporter):
             show_simple(terminalreporter, lines, 'passed', terminalreporter.language.get_passed().upper() + " %s")
 
     if lines:
-        # todo this into function
         tr.write_skipped_summary_info()
         for line in lines:
             tr.write_line(line, ensure_newline=False)
